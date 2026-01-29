@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rail</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <section class="tasks">
+        <header class="panel-header">
+          <h1>Rail</h1>
+          <p>Context Anchor · Execution GPS</p>
+        </header>
+        <div class="ingest">
+          <textarea id="task-input" placeholder="Paste tasks, one per line..."></textarea>
+          <button id="add-tasks">Add Tasks</button>
+        </div>
+        <div id="task-list" class="task-list" aria-live="polite"></div>
+      </section>
+      <section class="chat">
+        <div class="chat-toolbar">
+          <button id="toggle-settings" class="settings-toggle" aria-label="Toggle settings">f9ed</button>
+        </div>
+        <div class="settings">
+          <label>
+            API Key
+            <input id="api-key" type="password" placeholder="sk-..." />
+          </label>
+          <label>
+            Base URL
+            <input id="base-url" type="text" placeholder="https://api.openai.com" />
+          </label>
+          <button id="save-settings">Save Settings</button>
+        </div>
+        <div id="chat-messages" class="chat-messages"></div>
+        <div id="chat-status" class="chat-status"></div>
+        <div class="chat-input">
+          <input id="chat-input" type="text" placeholder="Ask about the active task..." />
+          <button id="send-chat">Send</button>
+        </div>
+      </section>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>
