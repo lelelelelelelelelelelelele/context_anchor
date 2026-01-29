@@ -1,0 +1,10 @@
+{
+  "name": "Rail",
+  "short_name": "Rail",
+  "description": "Context Anchor and Execution GPS for developers.",
+  "start_url": "sidepanel.html",
+  "display": "standalone",
+  "background_color": "#1e1e1e",
+  "theme_color": "#1e1e1e",
+  "scope": "./"
+}

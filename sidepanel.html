@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Rail</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="theme-color" content="#1e1e1e" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -21,9 +23,17 @@
       </section>
       <section class="chat">
         <div class="chat-toolbar">
-          <button id="toggle-settings" class="settings-toggle" aria-label="Toggle settings">f9ed</button>
+          <button id="clear-chat" class="clear-chat" aria-label="Clear chat">Clear</button>
+          <button id="toggle-settings" class="settings-toggle" aria-label="Toggle settings">
+            <span class="settings-icon" aria-hidden="true">&#9881;</span>
+          </button>
         </div>
         <div class="settings">
+          <div class="provider-manager">
+            <select id="provider-select" aria-label="Provider"></select>
+            <button id="add-provider" class="provider-action" title="New Provider">+</button>
+            <button id="delete-provider" class="provider-action" title="Delete Provider">×</button>
+          </div>
           <label>
             API Key
             <input id="api-key" type="password" placeholder="sk-..." />
@@ -32,7 +42,11 @@
             Base URL
             <input id="base-url" type="text" placeholder="https://api.openai.com" />
           </label>
-          <button id="save-settings">Save Settings</button>
+          <label>
+            Model
+            <input id="model" type="text" placeholder="gpt-4o-mini" />
+          </label>
+          <button id="save-settings">Save Provider</button>
         </div>
         <div id="chat-messages" class="chat-messages"></div>
         <div id="chat-status" class="chat-status"></div>

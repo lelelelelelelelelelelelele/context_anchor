@@ -20,596 +20,1230 @@
         ---------------------------------
 
 --- LineMark Manifest ---
-F1: github/copilotrule.md
-F2: github/manifest.json
-F3: github/README.md
-F4: github/script.js
-F5: github/sidepanel.html
-F6: github/styles.css
+F1: manifest.json
+F2: manifest.webmanifest
+F3: plan.md
+F4: README.md
+F5: script.js
+F6: service-worker.js
+F7: sidepanel.html
+F8: styles.css
+F9: system_prompt.txt
+F10: test.md
+F11: todo.md
+F12: github/copilotrule.md
 -----------------------
 - 配置文件: context_config.yaml
 
 ## 项目文件结构
 ```
-└── github/
-    ├── README.md
-    ├── copilotrule.md
-    ├── manifest.json
-    ├── script.js
-    ├── sidepanel.html
-    └── styles.css
+├── github/
+    └── copilotrule.md
+├── README.md
+├── manifest.json
+├── manifest.webmanifest
+├── plan.md
+├── script.js
+├── service-worker.js
+├── sidepanel.html
+├── styles.css
+├── system_prompt.txt
+├── test.md
+└── todo.md
 ```
 
 ## 源代码文件内容
 
 ================================================================================
-文件路径: github\copilotrule.md(F1) (约合大小: 2 KB)
+文件路径: manifest.json(F1) (约合大小: 0 KB)
 ================================================================================
-[F1:1]| # Project Rail - AI Instructions
-[F1:2]| 
-[F1:3]| ## 1. Project Identity
-[F1:4]| You are the lead developer for "Rail", a Chrome Extension designed to be a "Context Anchor" and "Execution GPS" for developers.
-[F1:5]| - **Core Philosophy**: Minimalist, Dark Mode, Local-First, One-Time Use (Disposable).
-[F1:6]| - **Tech Stack**: Vanilla JS (ES6+), HTML5, CSS3 (Flexbox), Chrome Extension Manifest V3. No React/Vue/Bundlers for the MVP.
-[F1:7]| 
-[F1:8]| ## 2. Architecture & Files
-[F1:9]| - **manifest.json**: Needs `sidePanel`, `activeTab`, `scripting`, `storage` permissions.
-[F1:10]| - **sidepanel.html**: The main UI.
-[F1:11]|   - Top 60%: Task List (Scrollable).
-[F1:12]|   - Bottom 40%: Chat Interface (Fixed).
-[F1:13]| - **styles.css**: VS Code-like Dark Mode theme. Colors: Bg `#1e1e1e`, Accent `#3b82f6`.
-[F1:14]| - **script.js**: Contains all logic for DOM manipulation, LocalStorage, and API calls.
-[F1:15]| 
-[F1:16]| ## 3. Core Features (The "Must-Haves")
-[F1:17]| ### A. Task List Logic
-[F1:18]| - **Data Structure**: Array of objects `{ id, text, status: 'pending'|'done', context_payload: {} }`.
-[F1:19]| - **Interaction**: Click to toggle done/active.
-[F1:20]| - **Smart Ingestion**: 
-[F1:21]|   - Allow users to paste raw text.
-[F1:22]|   - **Rule**: If raw text is pasted, simply split by newlines for the MVP (or call LLM if API key is present).
-[F1:23]| 
-[F1:24]| ### B. Chat & Context (BYOK)
-[F1:25]| - **Settings**: Store OpenAI API Key & Base URL in `localStorage`.
-[F1:26]| - **Context Injection**: When user asks a question in the chat input:
-[F1:27]|   1. Grab the currently **Active** task text.
-[F1:28]|   2. Grab the User's question.
-[F1:29]|   3. Construct System Prompt: "You are an execution assistant. Context Task: [Active Task]..."
-[F1:30]|   4. Call API (`POST /v1/chat/completions`).
-[F1:31]| 
-[F1:32]| ## 4. Coding Standards (Strict)
-[F1:33]| - **Error Handling**: Always check if API Key exists before calling API. Alert user if missing.
-[F1:34]| - **UI Feedback**: Show a loading spinner or text when waiting for API response.
-[F1:35]| - **Clean Code**: Keep logic in `script.js`. Use readable variable names. Comments are required for complex logic.
-[F1:36]| 
-[F1:37]| ## 5. Tone & Style
-[F1:38]| - Be concise.
-[F1:39]| - Focus on shipping working code.
-[F1:40]| - If I ask for a feature, implement it directly in the existing file structure.
+[F1:1]| {
+[F1:2]|   "manifest_version": 3,
+[F1:3]|   "name": "Rail",
+[F1:4]|   "version": "0.1.0",
+[F1:5]|   "description": "Context Anchor and Execution GPS for developers.",
+[F1:6]|   "permissions": ["sidePanel", "activeTab", "scripting", "storage"],
+[F1:7]|   "host_permissions": ["<all_urls>"],
+[F1:8]|   "side_panel": {
+[F1:9]|     "default_path": "sidepanel.html"
+[F1:10]|   },
+[F1:11]|   "action": {
+[F1:12]|     "default_title": "Rail"
+[F1:13]|   }
+[F1:14]| }
 
 ================================================================================
-文件路径: github\manifest.json(F2) (约合大小: 0 KB)
+文件路径: manifest.webmanifest(F2) (约合大小: 0 KB)
 ================================================================================
 [F2:1]| {
-[F2:2]|   "manifest_version": 3,
-[F2:3]|   "name": "Rail",
-[F2:4]|   "version": "0.1.0",
-[F2:5]|   "description": "Context Anchor and Execution GPS for developers.",
-[F2:6]|   "permissions": ["sidePanel", "activeTab", "scripting", "storage"],
-[F2:7]|   "side_panel": {
-[F2:8]|     "default_path": "sidepanel.html"
-[F2:9]|   },
-[F2:10]|   "action": {
-[F2:11]|     "default_title": "Rail"
-[F2:12]|   }
-[F2:13]| }
+[F2:2]|   "name": "Rail",
+[F2:3]|   "short_name": "Rail",
+[F2:4]|   "description": "Context Anchor and Execution GPS for developers.",
+[F2:5]|   "start_url": "sidepanel.html",
+[F2:6]|   "display": "standalone",
+[F2:7]|   "background_color": "#1e1e1e",
+[F2:8]|   "theme_color": "#1e1e1e",
+[F2:9]|   "scope": "./"
+[F2:10]| }
 
 ================================================================================
-文件路径: github\README.md(F3) (约合大小: 1 KB)
+文件路径: plan.md(F3) (约合大小: 5 KB)
 ================================================================================
-[F3:1]| # Rail (Chrome Extension MVP)
+[F3:1]| 明白了，这次我完全理解了：您需要的是**“多 Provider（服务商）管理系统”**。
 [F3:2]| 
-[F3:3]| Minimalist, local-first side panel for task anchoring and execution chat.
+[F3:3]| 您手动输入 `modelname`（默认为 `gemini`），但希望能够预设**多组 API Key + Base URL**。在对话前或设置中，您可以自由切换当前使用的是哪一组配置。
 [F3:4]| 
-[F3:5]| ## Files
-[F3:6]| - `manifest.json`: Chrome Extension Manifest V3.
-[F3:7]| - `sidepanel.html`: UI layout (60% tasks, 40% chat).
-[F3:8]| - `styles.css`: VS Code-like dark theme.
-[F3:9]| - `script.js`: Task list, settings, and chat logic.
-[F3:10]| 
-[F3:11]| ## Quick Test (Browser)
-[F3:12]| 1. Open `sidepanel.html` directly in a browser.
-[F3:13]| 2. Paste tasks (one per line) and click **Add Tasks**.
-[F3:14]| 3. Save API settings and send a chat question.
-[F3:15]| 
-[F3:16]| ## Load in Chrome
-[F3:17]| 1. Open `chrome://extensions/`.
-[F3:18]| 2. Enable **Developer mode**.
-[F3:19]| 3. Click **Load unpacked** and select the `github` folder.
-[F3:20]| 4. Open the side panel from the extension toolbar.
-[F3:21]| 
-[F3:22]| ## Manual Test Plan
-[F3:23]| - **Task ingestion**: Paste multi-line text → multiple tasks appear.
-[F3:24]| - **Toggle active/done**: Click tasks to mark done; active task is highlighted.
-[F3:25]| - **Persistence**: Refresh panel → tasks and settings remain.
-[F3:26]| - **API validation**: Remove API key → sending chat alerts.
-[F3:27]| - **Context injection**: Active task text appears in API prompt (inspect via server logs if using a proxy).
+[F3:5]| 以下是针对这一逻辑的深度重构方案：
+[F3:6]| 
+[F3:7]| ### 1. 修改 HTML 结构：增加 Provider 切换与管理
+[F3:8]| 我们将设置区域改为“配置列表 + 编辑区”的模式。
+[F3:9]| 
+[F3:10]| **修改 `sidepanel.html` `[F7:31-45]`：**
+[F3:11]| ```html
+[F3:12]| [F7:31]|         <div class="settings">
+[F3:13]| [F7:31.1]|          <div class="provider-manager">
+[F3:14]| [F7:31.2]|            <select id="provider-select"></select>
+[F3:15]| [F7:31.3]|            <button id="add-provider" title="New Provider">+</button>
+[F3:16]| [F7:31.4]|            <button id="delete-provider" title="Delete Current">×</button>
+[F3:17]| [F7:31.5]|          </div>
+[F3:18]| [F7:32]|           <label>
+[F3:19]| [F7:33]|             API Key
+[F3:20]| [F7:34]|             <input id="api-key" type="password" placeholder="sk-..." />
+[F3:21]| [F7:35]|           </label>
+[F3:22]| [F7:36]|           <label>
+[F3:23]| [F7:37]|             Base URL
+[F3:24]| [F7:38]|             <input id="base-url" type="text" placeholder="https://api.openai.com" />
+[F3:25]| [F7:39]|           </label>
+[F3:26]| [F7:40]|           <label>
+[F3:27]| [F7:41]|             Model Name
+[F3:28]| [F7:42]|             <input id="model" type="text" placeholder="gemini-pro" />
+[F3:29]| [F7:43]|           </label>
+[F3:30]| [F7:44]|           <button id="save-settings">Save Provider</button>
+[F3:31]| [F7:45]|         </div>
+[F3:32]| ```
+[F3:33]| 
+[F3:34]| ### 2. 修改脚本逻辑：支持多配置存储
+[F3:35]| 我们需要将原本的单配置改为数组存储。
+[F3:36]| 
+[F3:37]| **修改 `script.js` 中的常量与初始化 `[F5:3-8]`：**
+[F3:38]| ```javascript
+[F3:39]| [F5:3]| const PROVIDERS_KEY = "rail_providers";
+[F3:40]| [F5:4]| const ACTIVE_PROVIDER_INDEX = "rail_current_provider_idx";
+[F3:41]| [F5:8]| const DEFAULT_MODEL = "gemini"; // 默认模型设为 gemini
+[F3:42]| [F5:8.1]| let providers = [];
+[F3:43]| [F5:8.2]| let currentProviderIdx = 0;
+[F3:44]| ```
+[F3:45]| 
+[F3:46]| **重构 `loadSettings` 和 `saveSettings` `[F5:188-199]`：**
+[F3:47]| ```javascript
+[F3:48]| [F5:188]| function loadSettings() {
+[F3:49]| [F5:188.1]|   const raw = localStorage.getItem(PROVIDERS_KEY);
+[F3:50]| [F5:188.2]|   providers = raw ? JSON.parse(raw) : [{ name: "Default", key: "", url: DEFAULT_BASE_URL, model: DEFAULT_MODEL }];
+[F3:51]| [F5:188.3]|   currentProviderIdx = Number(localStorage.getItem(ACTIVE_PROVIDER_INDEX)) || 0;
+[F3:52]| [F5:188.4]|   renderProviderOptions();
+[F3:53]| [F5:188.5]|   fillSettingsFields();
+[F3:54]| [F5:189]| }
+[F3:55]| [F5:190]| 
+[F3:56]| [F5:191]| function renderProviderOptions() {
+[F3:57]| [F5:191.1]|   const select = document.getElementById("provider-select");
+[F3:58]| [F5:191.2]|   select.innerHTML = providers.map((p, i) => `<option value="${i}" ${i === currentProviderIdx ? 'selected' : ''}>${p.name || ('Config ' + i)}</option>`).join('');
+[F3:59]| [F5:191.3]| }
+[F3:60]| [F5:192]| 
+[F3:61]| [F5:193]| function fillSettingsFields() {
+[F3:62]| [F5:193.1]|   const p = providers[currentProviderIdx];
+[F3:63]| [F5:193.2]|   apiKeyInput.value = p.key || "";
+[F3:64]| [F5:193.3]|   baseUrlInput.value = p.url || DEFAULT_BASE_URL;
+[F3:65]| [F5:193.4]|   modelInput.value = p.model || DEFAULT_MODEL;
+[F3:66]| [F5:193.5]| }
+[F3:67]| [F5:194]| 
+[F3:68]| [F5:195]| function saveSettings() {
+[F3:69]| [F5:195.1]|   const p = providers[currentProviderIdx];
+[F3:70]| [F5:195.2]|   p.key = apiKeyInput.value.trim();
+[F3:71]| [F5:195.3]|   p.url = baseUrlInput.value.trim();
+[F3:72]| [F5:195.4]|   p.model = modelInput.value.trim();
+[F3:73]| [F5:195.5]|   localStorage.setItem(PROVIDERS_KEY, JSON.stringify(providers));
+[F3:74]| [F5:195.6]|   localStorage.setItem(ACTIVE_PROVIDER_INDEX, currentProviderIdx);
+[F3:75]| [F5:195.7]|   renderProviderOptions();
+[F3:76]| [F5:196]| }
+[F3:77]| ```
+[F3:78]| 
+[F3:79]| **增加 Provider 切换监听 `[F5:338]` 之后：**
+[F3:80]| ```javascript
+[F3:81]| [F5:338.1]| document.getElementById("provider-select").addEventListener("change", (e) => {
+[F3:82]| [F5:338.2]|   currentProviderIdx = Number(e.target.value);
+[F3:83]| [F5:338.3]|   fillSettingsFields();
+[F3:84]| [F5:338.4]|   localStorage.setItem(ACTIVE_PROVIDER_INDEX, currentProviderIdx);
+[F3:85]| [F5:338.5]| });
+[F3:86]| [F5:338.6]| 
+[F3:87]| [F5:338.7]| document.getElementById("add-provider").addEventListener("click", () => {
+[F3:88]| [F5:338.8]|   const name = prompt("Provider Name:", "New Config");
+[F3:89]| [F5:338.9]|   if (name) {
+[F3:90]| [F5:338.10]|    providers.push({ name, key: "", url: DEFAULT_BASE_URL, model: DEFAULT_MODEL });
+[F3:91]| [F5:338.11]|    currentProviderIdx = providers.length - 1;
+[F3:92]| [F5:338.12]|    saveSettings();
+[F3:93]| [F5:338.13]|   }
+[F3:94]| [F5:338.14]| });
+[F3:95]| ```
+[F3:96]| 
+[F3:97]| ### 3. 修改 CSS：适配新的设置界面
+[F3:98]| 由于设置项增多，我们需要让 `settings` 区域更规整。
+[F3:99]| 
+[F3:100]| **修改 `styles.css` `[F8:166-175]`：**
+[F3:101]| ```css
+[F3:102]| [F8:166]| .settings {
+[F3:103]| [F8:167]|   display: none;
+[F3:104]| [F8:168]|   flex-direction: column; /* 改为垂直排列 */
+[F3:105]| [F8:169]|   gap: 12px;
+[F3:106]| [F8:170]|   background: var(--bg);
+[F3:107]| [F8:171]|   padding: 12px;
+[F3:108]| [F8:172]|   border: 1px solid var(--border);
+[F3:109]| [F8:173]|   border-radius: 8px;
+[F3:110]| [F8:174]| }
+[F3:111]| [F8:174.1]| .provider-manager {
+[F3:112]| [F8:174.2]|   display: flex;
+[F3:113]| [F8:174.3]|   gap: 4px;
+[F3:114]| [F8:174.4]| }
+[F3:115]| [F8:174.5]| .provider-manager select { flex: 1; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 4px; }
+[F3:116]| ```
+[F3:117]| 
+[F3:118]| ### 4. 修复图标 (补充)
+[F3:119]| **修改 `sidepanel.html` `[F7:28]`：**
+[F3:120]| ```html
+[F3:121]| [F7:28]| <span class="settings-icon" aria-hidden="true">&#9881;</span>
+[F3:122]| ```
+[F3:123]| 
+[F3:124]| ### 这样修改后的工作流：
+[F3:125]| 1.  **管理**：您可以点击 `+` 创建“我的 Gemini 官方”、“我的 转发 API”等多个条目。
+[F3:126]| 2.  **选择**：通过下拉菜单切换当前活跃的 Provider，下面的 Key 和 URL 会自动同步切换。
+[F3:127]| 3.  **发送**：`sendChat` 函数会自动使用 `providers[currentProviderIdx]` 里的数据。
+[F3:128]| 4.  **模型**：`Model Name` 依然是一个普通的 `input`，您可以随时改成 `gemini-1.5-pro` 或任何您需要的名称。
+[F3:129]| 
+[F3:130]| **您觉得这个“多条目管理”方案是否符合您“自行选择”的需求？**
 
 ================================================================================
-文件路径: github\script.js(F4) (约合大小: 6 KB)
+文件路径: README.md(F4) (约合大小: 1 KB)
 ================================================================================
-[F4:1]| const TASKS_KEY = "rail_tasks";
-[F4:2]| const ACTIVE_TASK_KEY = "rail_active_task_id";
-[F4:3]| const API_KEY_STORAGE = "rail_api_key";
-[F4:4]| const BASE_URL_STORAGE = "rail_base_url";
-[F4:5]| const DEFAULT_BASE_URL = "https://api.openai.com";
-[F4:6]| const DEFAULT_MODEL = "gpt-4o-mini";
-[F4:7]| 
-[F4:8]| let tasks = [];
-[F4:9]| let activeTaskId = null;
+[F4:1]| # Rail (Extension + PWA)
+[F4:2]| 
+[F4:3]| Minimalist, local-first side panel for task anchoring and execution chat.
+[F4:4]| 
+[F4:5]| ## Files
+[F4:6]| - `manifest.json`: Chrome Extension Manifest V3.
+[F4:7]| - `sidepanel.html`: UI layout (60% tasks, 40% chat).
+[F4:8]| - `styles.css`: VS Code-like dark theme.
+[F4:9]| - `script.js`: Task list, settings, and chat logic.
 [F4:10]| 
-[F4:11]| const taskInput = document.getElementById("task-input");
-[F4:12]| const addTasksButton = document.getElementById("add-tasks");
-[F4:13]| const taskList = document.getElementById("task-list");
-[F4:14]| const apiKeyInput = document.getElementById("api-key");
-[F4:15]| const baseUrlInput = document.getElementById("base-url");
-[F4:16]| const saveSettingsButton = document.getElementById("save-settings");
-[F4:17]| const chatMessages = document.getElementById("chat-messages");
-[F4:18]| const chatStatus = document.getElementById("chat-status");
-[F4:19]| const chatInput = document.getElementById("chat-input");
-[F4:20]| const sendChatButton = document.getElementById("send-chat");
+[F4:11]| ## Quick Test (Browser)
+[F4:12]| 1. Open `sidepanel.html` directly in a browser.
+[F4:13]| 2. Paste tasks (one per line) and click **Add Tasks**.
+[F4:14]| 3. Save API settings and send a chat question.
+[F4:15]| 
+[F4:16]| ## Load in Chrome (Extension)
+[F4:17]| 1. Open `chrome://extensions/`.
+[F4:18]| 2. Enable **Developer mode**.
+[F4:19]| 3. Click **Load unpacked** and select the `github` folder.
+[F4:20]| 4. Open the side panel from the extension toolbar.
 [F4:21]| 
-[F4:22]| function loadTasks() {
-[F4:23]|   try {
-[F4:24]|     const raw = localStorage.getItem(TASKS_KEY);
-[F4:25]|     tasks = raw ? JSON.parse(raw) : [];
-[F4:26]|   } catch (error) {
-[F4:27]|     tasks = [];
-[F4:28]|   }
-[F4:29]| 
-[F4:30]|   const storedActive = localStorage.getItem(ACTIVE_TASK_KEY);
-[F4:31]|   activeTaskId = storedActive ? Number(storedActive) : null;
-[F4:32]| 
-[F4:33]|   if (!tasks.find((task) => task.id === activeTaskId)) {
-[F4:34]|     activeTaskId = null;
-[F4:35]|   }
-[F4:36]| 
-[F4:37]|   if (!activeTaskId) {
-[F4:38]|     const firstPending = tasks.find((task) => task.status === "pending");
-[F4:39]|     activeTaskId = firstPending ? firstPending.id : null;
-[F4:40]|   }
-[F4:41]| }
-[F4:42]| 
-[F4:43]| function saveTasks() {
-[F4:44]|   localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
-[F4:45]|   if (activeTaskId) {
-[F4:46]|     localStorage.setItem(ACTIVE_TASK_KEY, String(activeTaskId));
-[F4:47]|   } else {
-[F4:48]|     localStorage.removeItem(ACTIVE_TASK_KEY);
-[F4:49]|   }
-[F4:50]| }
-[F4:51]| 
-[F4:52]| function renderTasks() {
-[F4:53]|   taskList.innerHTML = "";
-[F4:54]| 
-[F4:55]|   if (tasks.length === 0) {
-[F4:56]|     const empty = document.createElement("div");
-[F4:57]|     empty.className = "task-status";
-[F4:58]|     empty.textContent = "No tasks yet. Paste a list to begin.";
-[F4:59]|     taskList.appendChild(empty);
-[F4:60]|     return;
-[F4:61]|   }
-[F4:62]| 
-[F4:63]|   tasks.forEach((task) => {
-[F4:64]|     const item = document.createElement("div");
-[F4:65]|     item.className = "task-item";
-[F4:66]|     if (task.status === "done") {
-[F4:67]|       item.classList.add("done");
-[F4:68]|     }
-[F4:69]|     if (task.id === activeTaskId) {
-[F4:70]|       item.classList.add("active");
-[F4:71]|     }
-[F4:72]|     item.dataset.id = String(task.id);
-[F4:73]| 
-[F4:74]|     const text = document.createElement("span");
-[F4:75]|     text.textContent = task.text;
-[F4:76]| 
-[F4:77]|     const status = document.createElement("span");
-[F4:78]|     status.className = "task-status";
-[F4:79]|     status.textContent = task.status === "done" ? "Done" : "Active";
-[F4:80]| 
-[F4:81]|     item.appendChild(text);
-[F4:82]|     item.appendChild(status);
-[F4:83]| 
-[F4:84]|     item.addEventListener("click", () => toggleTask(task.id));
-[F4:85]|     taskList.appendChild(item);
-[F4:86]|   });
-[F4:87]| }
-[F4:88]| 
-[F4:89]| function toggleTask(taskId) {
-[F4:90]|   const task = tasks.find((item) => item.id === taskId);
-[F4:91]|   if (!task) {
-[F4:92]|     return;
-[F4:93]|   }
-[F4:94]| 
-[F4:95]|   if (task.status === "done") {
-[F4:96]|     task.status = "pending";
-[F4:97]|     activeTaskId = task.id;
-[F4:98]|   } else {
-[F4:99]|     task.status = "done";
-[F4:100]|     if (activeTaskId === task.id) {
-[F4:101]|       const nextPending = tasks.find((item) => item.status === "pending");
-[F4:102]|       activeTaskId = nextPending ? nextPending.id : null;
-[F4:103]|     }
-[F4:104]|   }
-[F4:105]| 
-[F4:106]|   saveTasks();
-[F4:107]|   renderTasks();
-[F4:108]| }
-[F4:109]| 
-[F4:110]| function ingestTasks() {
-[F4:111]|   const rawText = taskInput.value.trim();
-[F4:112]|   if (!rawText) {
-[F4:113]|     return;
-[F4:114]|   }
-[F4:115]| 
-[F4:116]|   // MVP rule: split raw text by newline into tasks.
-[F4:117]|   const lines = rawText.split(/\r?\n/).map((line) => line.trim());
-[F4:118]|   const newTasks = lines.filter(Boolean).map((text, index) => ({
-[F4:119]|     id: Date.now() + index,
-[F4:120]|     text,
-[F4:121]|     status: "pending",
-[F4:122]|     context_payload: {},
-[F4:123]|   }));
-[F4:124]| 
-[F4:125]|   tasks = [...tasks, ...newTasks];
-[F4:126]|   taskInput.value = "";
-[F4:127]| 
-[F4:128]|   if (!activeTaskId && newTasks.length > 0) {
-[F4:129]|     activeTaskId = newTasks[0].id;
-[F4:130]|   }
-[F4:131]| 
-[F4:132]|   saveTasks();
-[F4:133]|   renderTasks();
-[F4:134]| }
-[F4:135]| 
-[F4:136]| function loadSettings() {
-[F4:137]|   apiKeyInput.value = localStorage.getItem(API_KEY_STORAGE) || "";
-[F4:138]|   baseUrlInput.value =
-[F4:139]|     localStorage.getItem(BASE_URL_STORAGE) || DEFAULT_BASE_URL;
-[F4:140]| }
-[F4:141]| 
-[F4:142]| function saveSettings() {
-[F4:143]|   localStorage.setItem(API_KEY_STORAGE, apiKeyInput.value.trim());
-[F4:144]|   localStorage.setItem(BASE_URL_STORAGE, baseUrlInput.value.trim());
-[F4:145]| }
-[F4:146]| 
-[F4:147]| function appendMessage(role, content) {
-[F4:148]|   const bubble = document.createElement("div");
-[F4:149]|   bubble.className = `chat-bubble ${role}`;
-[F4:150]|   bubble.textContent = content;
-[F4:151]|   chatMessages.appendChild(bubble);
-[F4:152]|   chatMessages.scrollTop = chatMessages.scrollHeight;
-[F4:153]| }
-[F4:154]| 
-[F4:155]| async function sendChat() {
-[F4:156]|   const question = chatInput.value.trim();
-[F4:157]|   if (!question) {
-[F4:158]|     return;
-[F4:159]|   }
-[F4:160]| 
-[F4:161]|   const apiKey = apiKeyInput.value.trim();
-[F4:162]|   if (!apiKey) {
-[F4:163]|     alert("Missing API Key. Please save your key first.");
-[F4:164]|     return;
-[F4:165]|   }
-[F4:166]| 
-[F4:167]|   const baseUrl = baseUrlInput.value.trim() || DEFAULT_BASE_URL;
-[F4:168]|   const activeTask = tasks.find((task) => task.id === activeTaskId);
-[F4:169]|   const activeTaskText = activeTask ? activeTask.text : "None";
-[F4:170]| 
-[F4:171]|   chatInput.value = "";
-[F4:172]|   appendMessage("user", question);
-[F4:173]|   chatStatus.textContent = "Thinking...";
-[F4:174]| 
-[F4:175]|   // Inject active task context into the system prompt.
-[F4:176]|   const systemPrompt = `You are an execution assistant. Context Task: ${activeTaskText}.`;
-[F4:177]| 
-[F4:178]|   try {
-[F4:179]|     const response = await fetch(`${baseUrl}/v1/chat/completions`, {
-[F4:180]|       method: "POST",
-[F4:181]|       headers: {
-[F4:182]|         "Content-Type": "application/json",
-[F4:183]|         Authorization: `Bearer ${apiKey}`,
-[F4:184]|       },
-[F4:185]|       body: JSON.stringify({
-[F4:186]|         model: DEFAULT_MODEL,
-[F4:187]|         messages: [
-[F4:188]|           { role: "system", content: systemPrompt },
-[F4:189]|           { role: "user", content: question },
-[F4:190]|         ],
-[F4:191]|       }),
-[F4:192]|     });
-[F4:193]| 
-[F4:194]|     if (!response.ok) {
-[F4:195]|       const errorText = await response.text();
-[F4:196]|       throw new Error(errorText || "API request failed.");
-[F4:197]|     }
-[F4:198]| 
-[F4:199]|     const data = await response.json();
-[F4:200]|     const reply =
-[F4:201]|       data.choices?.[0]?.message?.content || "No response from assistant.";
-[F4:202]|     appendMessage("assistant", reply);
-[F4:203]|   } catch (error) {
-[F4:204]|     appendMessage("assistant", `Error: ${error.message}`);
-[F4:205]|   } finally {
-[F4:206]|     chatStatus.textContent = "";
-[F4:207]|   }
-[F4:208]| }
-[F4:209]| 
-[F4:210]| addTasksButton.addEventListener("click", ingestTasks);
-[F4:211]| saveSettingsButton.addEventListener("click", saveSettings);
-[F4:212]| sendChatButton.addEventListener("click", sendChat);
-[F4:213]| chatInput.addEventListener("keydown", (event) => {
-[F4:214]|   if (event.key === "Enter") {
-[F4:215]|     sendChat();
-[F4:216]|   }
-[F4:217]| });
-[F4:218]| 
-[F4:219]| document.addEventListener("DOMContentLoaded", () => {
-[F4:220]|   loadTasks();
-[F4:221]|   loadSettings();
-[F4:222]|   renderTasks();
-[F4:223]| });
+[F4:22]| ## Run as PWA (Local)
+[F4:23]| 1. Start a local static server at the project root.
+[F4:24]| 2. Open the served `sidepanel.html` in a browser.
+[F4:25]| 3. Use the install icon to add it as an app (optional).
+[F4:26]| 
+[F4:27]| ## Manual Test Plan
+[F4:28]| - **Task ingestion**: Paste multi-line text → multiple tasks appear.
+[F4:29]| - **Toggle active/done**: Click tasks to mark done; active task is highlighted.
+[F4:30]| - **Persistence**: Refresh panel → tasks and settings remain.
+[F4:31]| - **API validation**: Remove API key → sending chat alerts.
+[F4:32]| - **Context injection**: Active task, totals, and pending list appear in prompt (inspect via server logs if using a proxy).
+[F4:33]| - **Providers**: Add multiple providers, switch dropdown, and verify settings change.
+[F4:34]| 
+[F4:35]| ## System Prompt Template
+[F4:36]| The system prompt lives in `system_prompt.txt`. You can edit it directly and use these placeholders:
+[F4:37]| - `{ACTIVE_TASK}`: Current active task text.
+[F4:38]| - `{TOTAL_TASKS}`: Number of tasks in the list.
+[F4:39]| - `{DONE_TASKS}`: Count of completed tasks.
+[F4:40]| - `{PENDING_TASKS}`: Bullet list of pending tasks (or "All tasks completed!").
 
 ================================================================================
-文件路径: github\sidepanel.html(F5) (约合大小: 1 KB)
+文件路径: script.js(F5) (约合大小: 12 KB)
 ================================================================================
-[F5:1]| <!doctype html>
-[F5:2]| <html lang="en">
-[F5:3]|   <head>
-[F5:4]|     <meta charset="UTF-8" />
-[F5:5]|     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-[F5:6]|     <title>Rail</title>
-[F5:7]|     <link rel="stylesheet" href="styles.css" />
-[F5:8]|   </head>
-[F5:9]|   <body>
-[F5:10]|     <div class="app">
-[F5:11]|       <section class="tasks">
-[F5:12]|         <header class="panel-header">
-[F5:13]|           <h1>Rail</h1>
-[F5:14]|           <p>Context Anchor · Execution GPS</p>
-[F5:15]|         </header>
-[F5:16]|         <div class="ingest">
-[F5:17]|           <textarea id="task-input" placeholder="Paste tasks, one per line..."></textarea>
-[F5:18]|           <button id="add-tasks">Add Tasks</button>
-[F5:19]|         </div>
-[F5:20]|         <div id="task-list" class="task-list" aria-live="polite"></div>
-[F5:21]|       </section>
-[F5:22]|       <section class="chat">
-[F5:23]|         <div class="settings">
-[F5:24]|           <label>
-[F5:25]|             API Key
-[F5:26]|             <input id="api-key" type="password" placeholder="sk-..." />
-[F5:27]|           </label>
-[F5:28]|           <label>
-[F5:29]|             Base URL
-[F5:30]|             <input id="base-url" type="text" placeholder="https://api.openai.com" />
-[F5:31]|           </label>
-[F5:32]|           <button id="save-settings">Save Settings</button>
-[F5:33]|         </div>
-[F5:34]|         <div id="chat-messages" class="chat-messages"></div>
-[F5:35]|         <div id="chat-status" class="chat-status"></div>
-[F5:36]|         <div class="chat-input">
-[F5:37]|           <input id="chat-input" type="text" placeholder="Ask about the active task..." />
-[F5:38]|           <button id="send-chat">Send</button>
-[F5:39]|         </div>
-[F5:40]|       </section>
-[F5:41]|     </div>
-[F5:42]|     <script src="script.js"></script>
-[F5:43]|   </body>
-[F5:44]| </html>
+[F5:1]| const TASKS_KEY = "rail_tasks";
+[F5:2]| const ACTIVE_TASK_KEY = "rail_active_task_id";
+[F5:3]| const PROVIDERS_KEY = "rail_providers";
+[F5:4]| const ACTIVE_PROVIDER_INDEX = "rail_current_provider_idx";
+[F5:5]| const TEMP_CHAT_KEY = "rail_temp_chat";
+[F5:6]| const DEFAULT_BASE_URL = "https://api.openai.com";
+[F5:7]| const DEFAULT_MODEL = "gpt-4o-mini";
+[F5:8]| const PROMPT_PATH = "system_prompt.txt";
+[F5:9]| const DEFAULT_SYSTEM_PROMPT_TEMPLATE = `You are Rail, a developer's Execution GPS.
+[F5:10]| 
+[F5:11]| [MACRO GOAL / PROGRESS]
+[F5:12]| Total tasks in project: {TOTAL_TASKS}
+[F5:13]| Completed: {DONE_TASKS}/{TOTAL_TASKS}
+[F5:14]| 
+[F5:15]| [NEXT STEPS IN PIPELINE]
+[F5:16]| {PENDING_TASKS}
+[F5:17]| 
+[F5:18]| [CURRENT FOCUS (CRITICAL)]
+[F5:19]| The user is currently working on: "{ACTIVE_TASK}"
+[F5:20]| 
+[F5:21]| [INSTRUCTION]
+[F5:22]| 1. Your answers MUST align with the Current Focus.
+[F5:23]| 2. Use the Macro Goal and Next Steps only as background context to ensure consistency.
+[F5:24]| 3. Be a minimalist. Give high-density, low-fluff code.`;
+[F5:25]| 
+[F5:26]| let tasks = [];
+[F5:27]| let activeTaskId = null;
+[F5:28]| let chatHistory = [];
+[F5:29]| let systemPromptTemplate = DEFAULT_SYSTEM_PROMPT_TEMPLATE;
+[F5:30]| let providers = [];
+[F5:31]| let currentProviderIdx = 0;
+[F5:32]| 
+[F5:33]| const taskInput = document.getElementById("task-input");
+[F5:34]| const addTasksButton = document.getElementById("add-tasks");
+[F5:35]| const taskList = document.getElementById("task-list");
+[F5:36]| const apiKeyInput = document.getElementById("api-key");
+[F5:37]| const baseUrlInput = document.getElementById("base-url");
+[F5:38]| const modelInput = document.getElementById("model");
+[F5:39]| const saveSettingsButton = document.getElementById("save-settings");
+[F5:40]| const providerSelect = document.getElementById("provider-select");
+[F5:41]| const addProviderButton = document.getElementById("add-provider");
+[F5:42]| const deleteProviderButton = document.getElementById("delete-provider");
+[F5:43]| const chatMessages = document.getElementById("chat-messages");
+[F5:44]| const chatStatus = document.getElementById("chat-status");
+[F5:45]| const chatInput = document.getElementById("chat-input");
+[F5:46]| const sendChatButton = document.getElementById("send-chat");
+[F5:47]| const toggleSettingsButton = document.getElementById("toggle-settings");
+[F5:48]| const settingsPanel = document.querySelector(".settings");
+[F5:49]| const clearChatButton = document.getElementById("clear-chat");
+[F5:50]| 
+[F5:51]| function loadTasks() {
+[F5:52]|   try {
+[F5:53]|     const raw = localStorage.getItem(TASKS_KEY);
+[F5:54]|     tasks = raw ? JSON.parse(raw) : [];
+[F5:55]|   } catch (error) {
+[F5:56]|     tasks = [];
+[F5:57]|   }
+[F5:58]| 
+[F5:59]|   const storedActive = localStorage.getItem(ACTIVE_TASK_KEY);
+[F5:60]|   activeTaskId = storedActive ? Number(storedActive) : null;
+[F5:61]| 
+[F5:62]|   if (!tasks.find((task) => task.id === activeTaskId)) {
+[F5:63]|     activeTaskId = null;
+[F5:64]|   }
+[F5:65]| 
+[F5:66]|   if (!activeTaskId) {
+[F5:67]|     const firstPending = tasks.find((task) => task.status === "pending");
+[F5:68]|     activeTaskId = firstPending ? firstPending.id : null;
+[F5:69]|   }
+[F5:70]| 
+[F5:71]|   const cachedChat = localStorage.getItem(TEMP_CHAT_KEY);
+[F5:72]|   if (cachedChat) {
+[F5:73]|     try {
+[F5:74]|       const parsed = JSON.parse(cachedChat);
+[F5:75]|       if (Array.isArray(parsed)) {
+[F5:76]|         chatHistory = parsed;
+[F5:77]|       }
+[F5:78]|     } catch (error) {
+[F5:79]|       chatHistory = [];
+[F5:80]|     }
+[F5:81]|   }
+[F5:82]| }
+[F5:83]| 
+[F5:84]| function saveTasks() {
+[F5:85]|   localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+[F5:86]|   if (activeTaskId) {
+[F5:87]|     localStorage.setItem(ACTIVE_TASK_KEY, String(activeTaskId));
+[F5:88]|   } else {
+[F5:89]|     localStorage.removeItem(ACTIVE_TASK_KEY);
+[F5:90]|   }
+[F5:91]| }
+[F5:92]| 
+[F5:93]| function renderTasks() {
+[F5:94]|   taskList.innerHTML = "";
+[F5:95]| 
+[F5:96]|   if (tasks.length === 0) {
+[F5:97]|     const empty = document.createElement("div");
+[F5:98]|     empty.className = "task-status";
+[F5:99]|     empty.textContent = "No tasks yet. Paste a list to begin.";
+[F5:100]|     taskList.appendChild(empty);
+[F5:101]|     return;
+[F5:102]|   }
+[F5:103]| 
+[F5:104]|   tasks.forEach((task) => {
+[F5:105]|     const item = document.createElement("div");
+[F5:106]|     item.className = "task-item";
+[F5:107]|     if (task.status === "done") {
+[F5:108]|       item.classList.add("done");
+[F5:109]|     }
+[F5:110]|     if (task.id === activeTaskId) {
+[F5:111]|       item.classList.add("active");
+[F5:112]|     }
+[F5:113]|     item.dataset.id = String(task.id);
+[F5:114]| 
+[F5:115]|     const text = document.createElement("span");
+[F5:116]|     text.textContent = task.text;
+[F5:117]| 
+[F5:118]|     const status = document.createElement("span");
+[F5:119]|     status.className = "task-status";
+[F5:120]|     status.textContent = task.status === "done" ? "Done" : "Active";
+[F5:121]| 
+[F5:122]|     item.appendChild(text);
+[F5:123]|     item.appendChild(status);
+[F5:124]| 
+[F5:125]|     item.addEventListener("click", () => toggleTask(task.id));
+[F5:126]|     taskList.appendChild(item);
+[F5:127]|   });
+[F5:128]| }
+[F5:129]| 
+[F5:130]| function toggleTask(taskId) {
+[F5:131]|   const task = tasks.find((item) => item.id === taskId);
+[F5:132]|   if (!task) {
+[F5:133]|     return;
+[F5:134]|   }
+[F5:135]| 
+[F5:136]|   const switchingTask = activeTaskId && taskId !== activeTaskId;
+[F5:137]|   if (switchingTask) {
+[F5:138]|     clearChatContext();
+[F5:139]|   }
+[F5:140]| 
+[F5:141]|   if (taskId !== activeTaskId) {
+[F5:142]|     activeTaskId = task.id;
+[F5:143]|     if (task.status === "done") {
+[F5:144]|       task.status = "pending";
+[F5:145]|     }
+[F5:146]|   } else {
+[F5:147]|     task.status = task.status === "done" ? "pending" : "done";
+[F5:148]|     if (task.status === "done") {
+[F5:149]|       const nextPending = tasks.find((item) => item.status === "pending");
+[F5:150]|       activeTaskId = nextPending ? nextPending.id : null;
+[F5:151]|     }
+[F5:152]|   }
+[F5:153]| 
+[F5:154]|   saveTasks();
+[F5:155]|   renderTasks();
+[F5:156]| }
+[F5:157]| 
+[F5:158]| function ingestTasks() {
+[F5:159]|   const rawText = taskInput.value.trim();
+[F5:160]|   if (!rawText) {
+[F5:161]|     return;
+[F5:162]|   }
+[F5:163]| 
+[F5:164]|   // MVP rule: split raw text by newline into tasks.
+[F5:165]|   const lines = rawText.split(/\r?\n/).map((line) => line.trim());
+[F5:166]|   const newTasks = lines
+[F5:167]|     .filter(Boolean)
+[F5:168]|     .map((text, index) => {
+[F5:169]|       const cleanedText = text.replace(
+[F5:170]|         /^([-*+]|\d+\.)\s+(\[[\s_xX]\]\s+)?/i,
+[F5:171]|         ""
+[F5:172]|       );
+[F5:173]|       return {
+[F5:174]|         id: Date.now() + index,
+[F5:175]|         text: cleanedText,
+[F5:176]|         status: "pending",
+[F5:177]|         context_payload: {},
+[F5:178]|       };
+[F5:179]|     });
+[F5:180]| 
+[F5:181]|   tasks = [...tasks, ...newTasks];
+[F5:182]|   taskInput.value = "";
+[F5:183]| 
+[F5:184]|   if (!activeTaskId && newTasks.length > 0) {
+[F5:185]|     activeTaskId = newTasks[0].id;
+[F5:186]|   }
+[F5:187]| 
+[F5:188]|   saveTasks();
+[F5:189]|   renderTasks();
+[F5:190]| }
+[F5:191]| 
+[F5:192]| function loadSettings() {
+[F5:193]|   const raw = localStorage.getItem(PROVIDERS_KEY);
+[F5:194]|   providers = raw
+[F5:195]|     ? JSON.parse(raw)
+[F5:196]|     : [
+[F5:197]|         {
+[F5:198]|           name: "Default",
+[F5:199]|           key: "",
+[F5:200]|           url: DEFAULT_BASE_URL,
+[F5:201]|           model: DEFAULT_MODEL,
+[F5:202]|         },
+[F5:203]|       ];
+[F5:204]|   currentProviderIdx = Number(localStorage.getItem(ACTIVE_PROVIDER_INDEX)) || 0;
+[F5:205]|   if (currentProviderIdx >= providers.length) {
+[F5:206]|     currentProviderIdx = 0;
+[F5:207]|   }
+[F5:208]|   renderProviderOptions();
+[F5:209]|   fillSettingsFields();
+[F5:210]| }
+[F5:211]| 
+[F5:212]| function saveSettings() {
+[F5:213]|   const provider = providers[currentProviderIdx];
+[F5:214]|   provider.key = apiKeyInput.value.trim();
+[F5:215]|   provider.url = baseUrlInput.value.trim();
+[F5:216]|   provider.model = modelInput.value.trim();
+[F5:217]|   localStorage.setItem(PROVIDERS_KEY, JSON.stringify(providers));
+[F5:218]|   localStorage.setItem(ACTIVE_PROVIDER_INDEX, String(currentProviderIdx));
+[F5:219]|   renderProviderOptions();
+[F5:220]| }
+[F5:221]| 
+[F5:222]| function renderProviderOptions() {
+[F5:223]|   providerSelect.innerHTML = providers
+[F5:224]|     .map((provider, index) => {
+[F5:225]|       const selected = index === currentProviderIdx ? "selected" : "";
+[F5:226]|       const name = provider.name?.trim() || `Config ${index + 1}`;
+[F5:227]|       return `<option value="${index}" ${selected}>${name}</option>`;
+[F5:228]|     })
+[F5:229]|     .join("");
+[F5:230]| }
+[F5:231]| 
+[F5:232]| function fillSettingsFields() {
+[F5:233]|   const provider = providers[currentProviderIdx];
+[F5:234]|   apiKeyInput.value = provider?.key || "";
+[F5:235]|   baseUrlInput.value = provider?.url || DEFAULT_BASE_URL;
+[F5:236]|   modelInput.value = provider?.model || DEFAULT_MODEL;
+[F5:237]| }
+[F5:238]| 
+[F5:239]| function addProvider() {
+[F5:240]|   const name = prompt("Provider Name:", "New Config");
+[F5:241]|   if (!name) {
+[F5:242]|     return;
+[F5:243]|   }
+[F5:244]|   providers.push({
+[F5:245]|     name,
+[F5:246]|     key: "",
+[F5:247]|     url: DEFAULT_BASE_URL,
+[F5:248]|     model: DEFAULT_MODEL,
+[F5:249]|   });
+[F5:250]|   currentProviderIdx = providers.length - 1;
+[F5:251]|   saveSettings();
+[F5:252]|   fillSettingsFields();
+[F5:253]| }
+[F5:254]| 
+[F5:255]| function deleteProvider() {
+[F5:256]|   if (providers.length <= 1) {
+[F5:257]|     alert("At least one provider is required.");
+[F5:258]|     return;
+[F5:259]|   }
+[F5:260]|   providers.splice(currentProviderIdx, 1);
+[F5:261]|   currentProviderIdx = Math.max(0, currentProviderIdx - 1);
+[F5:262]|   saveSettings();
+[F5:263]|   fillSettingsFields();
+[F5:264]| }
+[F5:265]| 
+[F5:266]| function appendMessage(role, content) {
+[F5:267]|   const bubble = document.createElement("div");
+[F5:268]|   bubble.className = `chat-bubble ${role}`;
+[F5:269]|   bubble.textContent = content;
+[F5:270]|   chatMessages.appendChild(bubble);
+[F5:271]|   chatMessages.scrollTop = chatMessages.scrollHeight;
+[F5:272]|   persistChatHistory();
+[F5:273]| }
+[F5:274]| 
+[F5:275]| async function loadSystemPrompt() {
+[F5:276]|   try {
+[F5:277]|     const promptUrl =
+[F5:278]|       typeof chrome !== "undefined" && chrome.runtime?.getURL
+[F5:279]|         ? chrome.runtime.getURL(PROMPT_PATH)
+[F5:280]|         : PROMPT_PATH;
+[F5:281]|     const response = await fetch(promptUrl);
+[F5:282]|     if (!response.ok) {
+[F5:283]|       return;
+[F5:284]|     }
+[F5:285]|     const text = await response.text();
+[F5:286]|     if (text && text.trim()) {
+[F5:287]|       systemPromptTemplate = text.trim();
+[F5:288]|     }
+[F5:289]|   } catch (error) {
+[F5:290]|     systemPromptTemplate = DEFAULT_SYSTEM_PROMPT_TEMPLATE;
+[F5:291]|   }
+[F5:292]| }
+[F5:293]| 
+[F5:294]| function buildSystemPrompt(activeTaskText) {
+[F5:295]|   const template = systemPromptTemplate || DEFAULT_SYSTEM_PROMPT_TEMPLATE;
+[F5:296]|   const totalTasks = tasks.length;
+[F5:297]|   const doneTasks = tasks.filter((task) => task.status === "done").length;
+[F5:298]|   const pendingTasks = tasks
+[F5:299]|     .filter((task) => task.status === "pending")
+[F5:300]|     .map((task) => `- ${task.text}`)
+[F5:301]|     .join("\n");
+[F5:302]|   const pendingText = pendingTasks || "All tasks completed!";
+[F5:303]| 
+[F5:304]|   return template
+[F5:305]|     .replaceAll("{TOTAL_TASKS}", String(totalTasks))
+[F5:306]|     .replaceAll("{DONE_TASKS}", String(doneTasks))
+[F5:307]|     .replaceAll("{PENDING_TASKS}", pendingText)
+[F5:308]|     .replaceAll("{ACTIVE_TASK}", activeTaskText);
+[F5:309]| }
+[F5:310]| 
+[F5:311]| function persistChatHistory() {
+[F5:312]|   localStorage.setItem(TEMP_CHAT_KEY, JSON.stringify(chatHistory));
+[F5:313]| }
+[F5:314]| 
+[F5:315]| function clearChatContext() {
+[F5:316]|   chatHistory = [];
+[F5:317]|   chatMessages.innerHTML = "";
+[F5:318]|   localStorage.removeItem(TEMP_CHAT_KEY);
+[F5:319]|   appendMessage("system", "Context switched. Memory cleared.");
+[F5:320]| }
+[F5:321]| 
+[F5:322]| function clearChatHistory() {
+[F5:323]|   chatHistory = [];
+[F5:324]|   chatMessages.innerHTML = "";
+[F5:325]|   localStorage.removeItem(TEMP_CHAT_KEY);
+[F5:326]|   appendMessage("system", "Chat cleared.");
+[F5:327]| }
+[F5:328]| 
+[F5:329]| function restoreChatHistory() {
+[F5:330]|   if (chatHistory.length === 0) {
+[F5:331]|     return;
+[F5:332]|   }
+[F5:333]| 
+[F5:334]|   chatMessages.innerHTML = "";
+[F5:335]|   chatHistory.forEach((message) => {
+[F5:336]|     if (!message?.role || !message?.content) {
+[F5:337]|       return;
+[F5:338]|     }
+[F5:339]|     appendMessage(message.role, message.content);
+[F5:340]|   });
+[F5:341]| }
+[F5:342]| 
+[F5:343]| async function sendChat() {
+[F5:344]|   const question = chatInput.value.trim();
+[F5:345]|   if (!question) {
+[F5:346]|     return;
+[F5:347]|   }
+[F5:348]| 
+[F5:349]|   const apiKey = apiKeyInput.value.trim();
+[F5:350]|   if (!apiKey) {
+[F5:351]|     alert("Missing API Key. Please save your key first.");
+[F5:352]|     return;
+[F5:353]|   }
+[F5:354]| 
+[F5:355]|   const baseUrl = baseUrlInput.value.trim() || DEFAULT_BASE_URL;
+[F5:356]|   const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
+[F5:357]|   const endpointUrl = `${normalizedBaseUrl}/chat/completions`;
+[F5:358]|   const model = modelInput.value.trim() || DEFAULT_MODEL;
+[F5:359]|   const activeTask = tasks.find((task) => task.id === activeTaskId);
+[F5:360]|   const activeTaskText = activeTask ? activeTask.text : "None";
+[F5:361]| 
+[F5:362]|   chatInput.value = "";
+[F5:363]|   appendMessage("user", question);
+[F5:364]|   chatStatus.textContent = "Thinking...";
+[F5:365]| 
+[F5:366]|   // Inject active task context into the system prompt.
+[F5:367]|   const systemPrompt = buildSystemPrompt(activeTaskText);
+[F5:368]| 
+[F5:369]|   chatHistory.push({ role: "user", content: question });
+[F5:370]| 
+[F5:371]|   try {
+[F5:372]|     const response = await fetch(endpointUrl, {
+[F5:373]|       method: "POST",
+[F5:374]|       headers: {
+[F5:375]|         "Content-Type": "application/json",
+[F5:376]|         Authorization: `Bearer ${apiKey}`,
+[F5:377]|       },
+[F5:378]|       body: JSON.stringify({
+[F5:379]|         model,
+[F5:380]|         messages: [{ role: "system", content: systemPrompt }, ...chatHistory],
+[F5:381]|       }),
+[F5:382]|     });
+[F5:383]| 
+[F5:384]|     if (!response.ok) {
+[F5:385]|       const errorText = await response.text();
+[F5:386]|       throw new Error(errorText || "API request failed.");
+[F5:387]|     }
+[F5:388]| 
+[F5:389]|     const data = await response.json();
+[F5:390]|     const reply =
+[F5:391]|       data.choices?.[0]?.message?.content || "No response from assistant.";
+[F5:392]|     chatHistory.push({ role: "assistant", content: reply });
+[F5:393]|     appendMessage("assistant", reply);
+[F5:394]|   } catch (error) {
+[F5:395]|     appendMessage("assistant", `Error: ${error.message}`);
+[F5:396]|   } finally {
+[F5:397]|     chatStatus.textContent = "";
+[F5:398]|   }
+[F5:399]| }
+[F5:400]| 
+[F5:401]| addTasksButton.addEventListener("click", ingestTasks);
+[F5:402]| saveSettingsButton.addEventListener("click", saveSettings);
+[F5:403]| sendChatButton.addEventListener("click", sendChat);
+[F5:404]| toggleSettingsButton.addEventListener("click", () => {
+[F5:405]|   settingsPanel.classList.toggle("visible");
+[F5:406]| });
+[F5:407]| clearChatButton.addEventListener("click", clearChatHistory);
+[F5:408]| providerSelect.addEventListener("change", (event) => {
+[F5:409]|   currentProviderIdx = Number(event.target.value);
+[F5:410]|   fillSettingsFields();
+[F5:411]|   localStorage.setItem(ACTIVE_PROVIDER_INDEX, String(currentProviderIdx));
+[F5:412]| });
+[F5:413]| addProviderButton.addEventListener("click", addProvider);
+[F5:414]| deleteProviderButton.addEventListener("click", deleteProvider);
+[F5:415]| chatInput.addEventListener("keydown", (event) => {
+[F5:416]|   if (event.key === "Enter") {
+[F5:417]|     sendChat();
+[F5:418]|   }
+[F5:419]| });
+[F5:420]| 
+[F5:421]| document.addEventListener("DOMContentLoaded", () => {
+[F5:422]|   loadTasks();
+[F5:423]|   loadSettings();
+[F5:424]|   renderTasks();
+[F5:425]|   restoreChatHistory();
+[F5:426]|   loadSystemPrompt();
+[F5:427]|   if ("serviceWorker" in navigator && window.location.protocol !== "chrome-extension:") {
+[F5:428]|     navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+[F5:429]|   }
+[F5:430]| });
 
 ================================================================================
-文件路径: github\styles.css(F6) (约合大小: 3 KB)
+文件路径: service-worker.js(F6) (约合大小: 1 KB)
 ================================================================================
-[F6:1]| :root {
-[F6:2]|   color-scheme: dark;
-[F6:3]|   --bg: #1e1e1e;
-[F6:4]|   --panel: #252526;
-[F6:5]|   --border: #333333;
-[F6:6]|   --text: #e5e7eb;
-[F6:7]|   --muted: #9ca3af;
-[F6:8]|   --accent: #3b82f6;
-[F6:9]|   --accent-soft: rgba(59, 130, 246, 0.15);
-[F6:10]|   --done: #10b981;
-[F6:11]| }
-[F6:12]| 
-[F6:13]| * {
-[F6:14]|   box-sizing: border-box;
-[F6:15]| }
-[F6:16]| 
-[F6:17]| body {
-[F6:18]|   margin: 0;
-[F6:19]|   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-[F6:20]|   background: var(--bg);
-[F6:21]|   color: var(--text);
-[F6:22]|   height: 100vh;
-[F6:23]| }
-[F6:24]| 
-[F6:25]| .app {
-[F6:26]|   display: flex;
-[F6:27]|   flex-direction: column;
-[F6:28]|   height: 100vh;
-[F6:29]| }
-[F6:30]| 
-[F6:31]| .tasks {
-[F6:32]|   flex: 6;
-[F6:33]|   display: flex;
-[F6:34]|   flex-direction: column;
-[F6:35]|   gap: 12px;
-[F6:36]|   padding: 16px;
-[F6:37]|   border-bottom: 1px solid var(--border);
-[F6:38]|   overflow: hidden;
-[F6:39]| }
-[F6:40]| 
-[F6:41]| .panel-header h1 {
-[F6:42]|   margin: 0;
-[F6:43]|   font-size: 20px;
-[F6:44]| }
-[F6:45]| 
-[F6:46]| .panel-header p {
-[F6:47]|   margin: 4px 0 0;
-[F6:48]|   color: var(--muted);
-[F6:49]|   font-size: 12px;
-[F6:50]| }
-[F6:51]| 
-[F6:52]| .ingest {
-[F6:53]|   display: flex;
-[F6:54]|   gap: 8px;
-[F6:55]| }
-[F6:56]| 
-[F6:57]| #task-input {
-[F6:58]|   flex: 1;
-[F6:59]|   min-height: 68px;
-[F6:60]|   background: var(--panel);
-[F6:61]|   border: 1px solid var(--border);
-[F6:62]|   color: var(--text);
-[F6:63]|   padding: 8px;
-[F6:64]|   border-radius: 8px;
-[F6:65]|   resize: vertical;
-[F6:66]| }
-[F6:67]| 
-[F6:68]| button {
-[F6:69]|   background: var(--accent);
-[F6:70]|   border: none;
-[F6:71]|   color: white;
-[F6:72]|   padding: 8px 12px;
-[F6:73]|   border-radius: 8px;
-[F6:74]|   cursor: pointer;
-[F6:75]|   font-weight: 600;
-[F6:76]| }
-[F6:77]| 
-[F6:78]| button:hover {
-[F6:79]|   background: #2563eb;
-[F6:80]| }
-[F6:81]| 
-[F6:82]| .task-list {
-[F6:83]|   flex: 1;
-[F6:84]|   overflow-y: auto;
-[F6:85]|   display: flex;
-[F6:86]|   flex-direction: column;
-[F6:87]|   gap: 8px;
-[F6:88]|   padding-right: 4px;
-[F6:89]| }
-[F6:90]| 
-[F6:91]| .task-item {
-[F6:92]|   border: 1px solid var(--border);
-[F6:93]|   background: var(--panel);
-[F6:94]|   padding: 10px 12px;
-[F6:95]|   border-radius: 10px;
-[F6:96]|   display: flex;
-[F6:97]|   justify-content: space-between;
-[F6:98]|   align-items: center;
-[F6:99]|   cursor: pointer;
-[F6:100]| }
-[F6:101]| 
-[F6:102]| .task-item.active {
-[F6:103]|   border-color: var(--accent);
-[F6:104]|   background: var(--accent-soft);
-[F6:105]| }
-[F6:106]| 
-[F6:107]| .task-item.done {
-[F6:108]|   opacity: 0.6;
-[F6:109]|   text-decoration: line-through;
-[F6:110]| }
-[F6:111]| 
-[F6:112]| .task-status {
-[F6:113]|   font-size: 12px;
-[F6:114]|   color: var(--muted);
-[F6:115]| }
-[F6:116]| 
-[F6:117]| .chat {
-[F6:118]|   flex: 4;
-[F6:119]|   display: flex;
-[F6:120]|   flex-direction: column;
-[F6:121]|   gap: 10px;
-[F6:122]|   padding: 16px;
-[F6:123]|   overflow: hidden;
-[F6:124]| }
-[F6:125]| 
-[F6:126]| .settings {
-[F6:127]|   display: grid;
-[F6:128]|   grid-template-columns: 1fr 1fr auto;
-[F6:129]|   gap: 8px;
-[F6:130]|   align-items: end;
-[F6:131]| }
-[F6:132]| 
-[F6:133]| .settings label {
-[F6:134]|   font-size: 12px;
-[F6:135]|   display: flex;
-[F6:136]|   flex-direction: column;
-[F6:137]|   gap: 4px;
-[F6:138]| }
-[F6:139]| 
-[F6:140]| .settings input {
-[F6:141]|   background: var(--panel);
-[F6:142]|   border: 1px solid var(--border);
-[F6:143]|   color: var(--text);
-[F6:144]|   padding: 6px 8px;
-[F6:145]|   border-radius: 8px;
-[F6:146]| }
-[F6:147]| 
-[F6:148]| .chat-messages {
-[F6:149]|   flex: 1;
-[F6:150]|   overflow-y: auto;
-[F6:151]|   background: var(--panel);
-[F6:152]|   border: 1px solid var(--border);
-[F6:153]|   padding: 10px;
-[F6:154]|   border-radius: 10px;
-[F6:155]|   display: flex;
-[F6:156]|   flex-direction: column;
-[F6:157]|   gap: 8px;
-[F6:158]| }
-[F6:159]| 
-[F6:160]| .chat-bubble {
-[F6:161]|   padding: 8px 10px;
-[F6:162]|   border-radius: 10px;
-[F6:163]|   max-width: 90%;
-[F6:164]|   line-height: 1.4;
-[F6:165]| }
-[F6:166]| 
-[F6:167]| .chat-bubble.user {
-[F6:168]|   align-self: flex-end;
-[F6:169]|   background: var(--accent);
-[F6:170]|   color: white;
-[F6:171]| }
-[F6:172]| 
-[F6:173]| .chat-bubble.assistant {
-[F6:174]|   align-self: flex-start;
-[F6:175]|   background: #111827;
-[F6:176]|   color: var(--text);
-[F6:177]| }
-[F6:178]| 
-[F6:179]| .chat-status {
-[F6:180]|   min-height: 18px;
-[F6:181]|   font-size: 12px;
-[F6:182]|   color: var(--muted);
-[F6:183]| }
-[F6:184]| 
-[F6:185]| .chat-input {
-[F6:186]|   display: flex;
-[F6:187]|   gap: 8px;
-[F6:188]| }
-[F6:189]| 
-[F6:190]| #chat-input {
-[F6:191]|   flex: 1;
-[F6:192]|   background: var(--panel);
-[F6:193]|   border: 1px solid var(--border);
-[F6:194]|   color: var(--text);
-[F6:195]|   padding: 8px 10px;
-[F6:196]|   border-radius: 10px;
-[F6:197]| }
+[F6:1]| const CACHE_NAME = "rail-pwa-v1";
+[F6:2]| const ASSETS = [
+[F6:3]|   "./",
+[F6:4]|   "./sidepanel.html",
+[F6:5]|   "./styles.css",
+[F6:6]|   "./script.js",
+[F6:7]|   "./system_prompt.txt",
+[F6:8]|   "./manifest.webmanifest",
+[F6:9]| ];
+[F6:10]| 
+[F6:11]| self.addEventListener("install", (event) => {
+[F6:12]|   event.waitUntil(
+[F6:13]|     caches
+[F6:14]|       .open(CACHE_NAME)
+[F6:15]|       .then((cache) => cache.addAll(ASSETS))
+[F6:16]|       .then(() => self.skipWaiting())
+[F6:17]|   );
+[F6:18]| });
+[F6:19]| 
+[F6:20]| self.addEventListener("activate", (event) => {
+[F6:21]|   event.waitUntil(
+[F6:22]|     caches
+[F6:23]|       .keys()
+[F6:24]|       .then((keys) =>
+[F6:25]|         Promise.all(
+[F6:26]|           keys
+[F6:27]|             .filter((key) => key !== CACHE_NAME)
+[F6:28]|             .map((key) => caches.delete(key))
+[F6:29]|         )
+[F6:30]|       )
+[F6:31]|       .then(() => self.clients.claim())
+[F6:32]|   );
+[F6:33]| });
+[F6:34]| 
+[F6:35]| self.addEventListener("fetch", (event) => {
+[F6:36]|   if (event.request.method !== "GET") {
+[F6:37]|     return;
+[F6:38]|   }
+[F6:39]| 
+[F6:40]|   event.respondWith(
+[F6:41]|     caches.match(event.request).then((cached) => {
+[F6:42]|       if (cached) {
+[F6:43]|         return cached;
+[F6:44]|       }
+[F6:45]|       return fetch(event.request).then((response) => {
+[F6:46]|         if (!response || response.status !== 200 || response.type !== "basic") {
+[F6:47]|           return response;
+[F6:48]|         }
+[F6:49]|         const responseClone = response.clone();
+[F6:50]|         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+[F6:51]|         return response;
+[F6:52]|       });
+[F6:53]|     })
+[F6:54]|   );
+[F6:55]| });
+
+================================================================================
+文件路径: sidepanel.html(F7) (约合大小: 2 KB)
+================================================================================
+[F7:1]| <!doctype html>
+[F7:2]| <html lang="en">
+[F7:3]|   <head>
+[F7:4]|     <meta charset="UTF-8" />
+[F7:5]|     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+[F7:6]|     <title>Rail</title>
+[F7:7]|     <link rel="manifest" href="manifest.webmanifest" />
+[F7:8]|     <meta name="theme-color" content="#1e1e1e" />
+[F7:9]|     <link rel="stylesheet" href="styles.css" />
+[F7:10]|   </head>
+[F7:11]|   <body>
+[F7:12]|     <div class="app">
+[F7:13]|       <section class="tasks">
+[F7:14]|         <header class="panel-header">
+[F7:15]|           <h1>Rail</h1>
+[F7:16]|           <p>Context Anchor · Execution GPS</p>
+[F7:17]|         </header>
+[F7:18]|         <div class="ingest">
+[F7:19]|           <textarea id="task-input" placeholder="Paste tasks, one per line..."></textarea>
+[F7:20]|           <button id="add-tasks">Add Tasks</button>
+[F7:21]|         </div>
+[F7:22]|         <div id="task-list" class="task-list" aria-live="polite"></div>
+[F7:23]|       </section>
+[F7:24]|       <section class="chat">
+[F7:25]|         <div class="chat-toolbar">
+[F7:26]|           <button id="clear-chat" class="clear-chat" aria-label="Clear chat">Clear</button>
+[F7:27]|           <button id="toggle-settings" class="settings-toggle" aria-label="Toggle settings">
+[F7:28]|             <span class="settings-icon" aria-hidden="true">&#9881;</span>
+[F7:29]|           </button>
+[F7:30]|         </div>
+[F7:31]|         <div class="settings">
+[F7:32]|           <div class="provider-manager">
+[F7:33]|             <select id="provider-select" aria-label="Provider"></select>
+[F7:34]|             <button id="add-provider" class="provider-action" title="New Provider">+</button>
+[F7:35]|             <button id="delete-provider" class="provider-action" title="Delete Provider">×</button>
+[F7:36]|           </div>
+[F7:37]|           <label>
+[F7:38]|             API Key
+[F7:39]|             <input id="api-key" type="password" placeholder="sk-..." />
+[F7:40]|           </label>
+[F7:41]|           <label>
+[F7:42]|             Base URL
+[F7:43]|             <input id="base-url" type="text" placeholder="https://api.openai.com" />
+[F7:44]|           </label>
+[F7:45]|           <label>
+[F7:46]|             Model
+[F7:47]|             <input id="model" type="text" placeholder="gpt-4o-mini" />
+[F7:48]|           </label>
+[F7:49]|           <button id="save-settings">Save Provider</button>
+[F7:50]|         </div>
+[F7:51]|         <div id="chat-messages" class="chat-messages"></div>
+[F7:52]|         <div id="chat-status" class="chat-status"></div>
+[F7:53]|         <div class="chat-input">
+[F7:54]|           <input id="chat-input" type="text" placeholder="Ask about the active task..." />
+[F7:55]|           <button id="send-chat">Send</button>
+[F7:56]|         </div>
+[F7:57]|       </section>
+[F7:58]|     </div>
+[F7:59]|     <script src="script.js"></script>
+[F7:60]|   </body>
+[F7:61]| </html>
+
+================================================================================
+文件路径: styles.css(F8) (约合大小: 4 KB)
+================================================================================
+[F8:1]| :root {
+[F8:2]|   color-scheme: dark;
+[F8:3]|   --bg: #1e1e1e;
+[F8:4]|   --panel: #252526;
+[F8:5]|   --border: #333333;
+[F8:6]|   --text: #e5e7eb;
+[F8:7]|   --muted: #9ca3af;
+[F8:8]|   --accent: #3b82f6;
+[F8:9]|   --accent-soft: rgba(59, 130, 246, 0.15);
+[F8:10]|   --done: #10b981;
+[F8:11]| }
+[F8:12]| 
+[F8:13]| * {
+[F8:14]|   box-sizing: border-box;
+[F8:15]| }
+[F8:16]| 
+[F8:17]| body {
+[F8:18]|   margin: 0;
+[F8:19]|   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+[F8:20]|   background: var(--bg);
+[F8:21]|   color: var(--text);
+[F8:22]|   height: 100vh;
+[F8:23]| }
+[F8:24]| 
+[F8:25]| .app {
+[F8:26]|   display: flex;
+[F8:27]|   flex-direction: column;
+[F8:28]|   height: 100vh;
+[F8:29]| }
+[F8:30]| 
+[F8:31]| .tasks {
+[F8:32]|   flex: 6;
+[F8:33]|   display: flex;
+[F8:34]|   flex-direction: column;
+[F8:35]|   gap: 12px;
+[F8:36]|   padding: 16px;
+[F8:37]|   border-bottom: 1px solid var(--border);
+[F8:38]|   overflow: hidden;
+[F8:39]| }
+[F8:40]| 
+[F8:41]| .panel-header h1 {
+[F8:42]|   margin: 0;
+[F8:43]|   font-size: 20px;
+[F8:44]| }
+[F8:45]| 
+[F8:46]| .panel-header p {
+[F8:47]|   margin: 4px 0 0;
+[F8:48]|   color: var(--muted);
+[F8:49]|   font-size: 12px;
+[F8:50]| }
+[F8:51]| 
+[F8:52]| .ingest {
+[F8:53]|   display: flex;
+[F8:54]|   gap: 8px;
+[F8:55]| }
+[F8:56]| 
+[F8:57]| #task-input {
+[F8:58]|   flex: 1;
+[F8:59]|   min-height: 68px;
+[F8:60]|   background: var(--panel);
+[F8:61]|   border: 1px solid var(--border);
+[F8:62]|   color: var(--text);
+[F8:63]|   padding: 8px;
+[F8:64]|   border-radius: 8px;
+[F8:65]|   resize: vertical;
+[F8:66]| }
+[F8:67]| 
+[F8:68]| button {
+[F8:69]|   background: var(--accent);
+[F8:70]|   border: none;
+[F8:71]|   color: white;
+[F8:72]|   padding: 8px 12px;
+[F8:73]|   border-radius: 8px;
+[F8:74]|   cursor: pointer;
+[F8:75]|   font-weight: 600;
+[F8:76]| }
+[F8:77]| 
+[F8:78]| button:hover {
+[F8:79]|   background: #2563eb;
+[F8:80]| }
+[F8:81]| 
+[F8:82]| .task-list {
+[F8:83]|   flex: 1;
+[F8:84]|   overflow-y: auto;
+[F8:85]|   display: flex;
+[F8:86]|   flex-direction: column;
+[F8:87]|   gap: 8px;
+[F8:88]|   padding-right: 4px;
+[F8:89]| }
+[F8:90]| 
+[F8:91]| .task-item {
+[F8:92]|   border: 1px solid var(--border);
+[F8:93]|   background: var(--panel);
+[F8:94]|   padding: 10px 12px;
+[F8:95]|   border-radius: 10px;
+[F8:96]|   display: flex;
+[F8:97]|   justify-content: space-between;
+[F8:98]|   align-items: center;
+[F8:99]|   cursor: pointer;
+[F8:100]| }
+[F8:101]| 
+[F8:102]| .task-item.active {
+[F8:103]|   border-color: var(--accent);
+[F8:104]|   background: var(--accent-soft);
+[F8:105]| }
+[F8:106]| 
+[F8:107]| .task-item.done {
+[F8:108]|   opacity: 0.6;
+[F8:109]|   text-decoration: line-through;
+[F8:110]| }
+[F8:111]| 
+[F8:112]| .task-status {
+[F8:113]|   font-size: 12px;
+[F8:114]|   color: var(--muted);
+[F8:115]| }
+[F8:116]| 
+[F8:117]| .chat {
+[F8:118]|   flex: 4;
+[F8:119]|   display: flex;
+[F8:120]|   flex-direction: column;
+[F8:121]|   gap: 10px;
+[F8:122]|   padding: 16px;
+[F8:123]|   overflow: hidden;
+[F8:124]| }
+[F8:125]| 
+[F8:126]| .chat-toolbar {
+[F8:127]|   display: flex;
+[F8:128]|   justify-content: flex-end;
+[F8:129]|   gap: 8px;
+[F8:130]| }
+[F8:131]| 
+[F8:132]| .clear-chat {
+[F8:133]|   background: transparent;
+[F8:134]|   border: 1px solid var(--border);
+[F8:135]|   color: var(--muted);
+[F8:136]|   padding: 6px 10px;
+[F8:137]|   border-radius: 8px;
+[F8:138]|   cursor: pointer;
+[F8:139]|   font-weight: 600;
+[F8:140]| }
+[F8:141]| 
+[F8:142]| .clear-chat:hover {
+[F8:143]|   background: var(--panel);
+[F8:144]|   color: var(--text);
+[F8:145]| }
+[F8:146]| 
+[F8:147]| .settings-toggle {
+[F8:148]|   background: transparent;
+[F8:149]|   border: 1px solid var(--border);
+[F8:150]|   color: var(--muted);
+[F8:151]|   padding: 6px 8px;
+[F8:152]|   border-radius: 8px;
+[F8:153]|   cursor: pointer;
+[F8:154]| }
+[F8:155]| 
+[F8:156]| .settings-icon {
+[F8:157]|   font-size: 16px;
+[F8:158]|   line-height: 1;
+[F8:159]| }
+[F8:160]| 
+[F8:161]| .settings-toggle:hover {
+[F8:162]|   background: var(--panel);
+[F8:163]|   color: var(--text);
+[F8:164]| }
+[F8:165]| 
+[F8:166]| .settings {
+[F8:167]|   display: none;
+[F8:168]|   flex-direction: column;
+[F8:169]|   gap: 12px;
+[F8:170]|   background: var(--bg);
+[F8:171]|   padding: 12px;
+[F8:172]|   border: 1px solid var(--border);
+[F8:173]|   border-radius: 8px;
+[F8:174]| }
+[F8:175]| 
+[F8:176]| .settings.visible {
+[F8:177]|   display: flex;
+[F8:178]| }
+[F8:179]| 
+[F8:180]| .provider-manager {
+[F8:181]|   display: flex;
+[F8:182]|   gap: 6px;
+[F8:183]| }
+[F8:184]| 
+[F8:185]| .provider-manager select {
+[F8:186]|   flex: 1;
+[F8:187]|   background: var(--panel);
+[F8:188]|   border: 1px solid var(--border);
+[F8:189]|   color: var(--text);
+[F8:190]|   padding: 6px 8px;
+[F8:191]|   border-radius: 8px;
+[F8:192]| }
+[F8:193]| 
+[F8:194]| .provider-action {
+[F8:195]|   background: transparent;
+[F8:196]|   border: 1px solid var(--border);
+[F8:197]|   color: var(--muted);
+[F8:198]|   padding: 6px 10px;
+[F8:199]|   border-radius: 8px;
+[F8:200]|   cursor: pointer;
+[F8:201]|   font-weight: 600;
+[F8:202]| }
+[F8:203]| 
+[F8:204]| .provider-action:hover {
+[F8:205]|   background: var(--panel);
+[F8:206]|   color: var(--text);
+[F8:207]| }
+[F8:208]| 
+[F8:209]| .settings label {
+[F8:210]|   font-size: 12px;
+[F8:211]|   display: flex;
+[F8:212]|   flex-direction: column;
+[F8:213]|   gap: 4px;
+[F8:214]| }
+[F8:215]| 
+[F8:216]| .settings input {
+[F8:217]|   background: var(--panel);
+[F8:218]|   border: 1px solid var(--border);
+[F8:219]|   color: var(--text);
+[F8:220]|   padding: 6px 8px;
+[F8:221]|   border-radius: 8px;
+[F8:222]| }
+[F8:223]| 
+[F8:224]| .chat-messages {
+[F8:225]|   flex: 1;
+[F8:226]|   overflow-y: auto;
+[F8:227]|   background: var(--panel);
+[F8:228]|   border: 1px solid var(--border);
+[F8:229]|   padding: 10px;
+[F8:230]|   border-radius: 10px;
+[F8:231]|   display: flex;
+[F8:232]|   flex-direction: column;
+[F8:233]|   gap: 8px;
+[F8:234]| }
+[F8:235]| 
+[F8:236]| .chat-bubble {
+[F8:237]|   padding: 8px 10px;
+[F8:238]|   border-radius: 10px;
+[F8:239]|   max-width: 90%;
+[F8:240]|   line-height: 1.4;
+[F8:241]|   white-space: pre-wrap;
+[F8:242]|   font-family: inherit;
+[F8:243]| }
+[F8:244]| 
+[F8:245]| .chat-bubble.user {
+[F8:246]|   align-self: flex-end;
+[F8:247]|   background: var(--accent);
+[F8:248]|   color: white;
+[F8:249]| }
+[F8:250]| 
+[F8:251]| .chat-bubble.assistant {
+[F8:252]|   align-self: flex-start;
+[F8:253]|   background: #111827;
+[F8:254]|   color: var(--text);
+[F8:255]| }
+[F8:256]| 
+[F8:257]| .chat-bubble.system {
+[F8:258]|   align-self: center;
+[F8:259]|   background: transparent;
+[F8:260]|   color: var(--muted);
+[F8:261]|   font-size: 12px;
+[F8:262]| }
+[F8:263]| 
+[F8:264]| .chat-status {
+[F8:265]|   min-height: 18px;
+[F8:266]|   font-size: 12px;
+[F8:267]|   color: var(--muted);
+[F8:268]| }
+[F8:269]| 
+[F8:270]| .chat-input {
+[F8:271]|   display: flex;
+[F8:272]|   gap: 8px;
+[F8:273]| }
+[F8:274]| 
+[F8:275]| #chat-input {
+[F8:276]|   flex: 1;
+[F8:277]|   background: var(--panel);
+[F8:278]|   border: 1px solid var(--border);
+[F8:279]|   color: var(--text);
+[F8:280]|   padding: 8px 10px;
+[F8:281]|   border-radius: 10px;
+[F8:282]| }
+
+--------------------------------------------------------------------------------
+文件路径: system_prompt.txt(F9) (约合大小: 0 KB)
+--------------------------------------------------------------------------------
+[F9:1]| You are Rail, a developer's Execution GPS.
+[F9:2]| 
+[F9:3]| [MACRO GOAL / PROGRESS]
+[F9:4]| Total tasks in project: {TOTAL_TASKS}
+[F9:5]| Completed: {DONE_TASKS}/{TOTAL_TASKS}
+[F9:6]| 
+[F9:7]| [NEXT STEPS IN PIPELINE]
+[F9:8]| {PENDING_TASKS}
+[F9:9]| 
+[F9:10]| [CURRENT FOCUS (CRITICAL)]
+[F9:11]| The user is currently working on: "{ACTIVE_TASK}"
+[F9:12]| 
+[F9:13]| [INSTRUCTION]
+[F9:14]| 1. Your answers MUST align with the Current Focus.
+[F9:15]| 2. Use the Macro Goal and Next Steps only as background context to ensure consistency.
+[F9:16]| 3. Be a minimalist. Give high-density, low-fluff code.
+
+================================================================================
+文件路径: test.md(F10) (约合大小: 2 KB)
+================================================================================
+[F10:1]| 
+[F10:2]| ### 1. 部署到 Chrome 侧边栏 (首选验证方式)
+[F10:3]| 
+[F10:4]| 1.  **修正加载路径**：
+[F10:5]|     在您的 `README.md` `[F4:19]` 中写的是“选择 `github` 文件夹”，但在当前的源码结构中，`manifest.json` `[F1]` 位于**根目录**。
+[F10:6]|     *   **操作**：在 `chrome://extensions/` 点击“加载已解压的扩展程序”时，请选择**整个项目所在的根文件夹**。
+[F10:7]| 2.  **唤起侧边栏**：
+[F10:8]|     *   点击 Chrome 右上角的“扩展程序”图标（拼图形状）。
+[F10:9]|     *   找到 **Rail** 并点击。如果它没直接打开侧边栏，请查看地址栏右侧是否有 Rail 的小图标，点击它。
+[F10:10]| 
+[F10:11]| ---
+[F10:12]| 
+[F10:13]| ### 2. 基础功能验收清单 (3 分钟)
+[F10:14]| 
+[F10:15]| 请按以下顺序操作，验证 `script.js` `[F5]` 的核心逻辑：
+[F10:16]| 
+[F10:17]| *   **[ ] 任务录入 (Ingestion)**：
+[F10:18]|     在输入框粘贴以下内容并点击 **Add Tasks**：
+[F10:19]|     ```text
+[F10:20]|     - [ ] 验证 API 连接性
+[F10:21]|     1. 测试任务切换逻辑
+[F10:22]|     * 检查本地存储是否持久化
+[F10:23]|     ```
+[F10:24]|     *验证点*：`[F5:165-168]` 的正则逻辑应自动删掉前缀，列表里只显示“验证 API 连接性”等干净的文本。
+[F10:25]| 
+[F10:26]| *   **[ ] 状态切换 (Task Toggle)**：
+[F10:27]|     点击第一个任务。
+[F10:28]|     *验证点*：该任务应变为“蓝色高亮”（Active）`[F8:102]`。再次点击，它应变灰并带中划线（Done）`[F8:107]`。
+[F10:29]| 
+[F10:30]| *   **[ ] 配置保存 (Settings)**：
+[F10:31]|     点击右上角齿轮 `9ed`，输入 API Key、Base URL 和 Model，点击 **Save Settings**。
+[F10:32]|     *验证点*：刷新页面，配置信息应该依然存在（`localStorage` 持久化验证 `[F5:188]`）。
+[F10:33]| 
+[F10:34]| *   **[ ] 基础对话 (Chat)**：
+[F10:35]|     选中一个任务，在对话框输入 `你好，该任务的重点是什么？`。
+[F10:36]|     *验证点*：
+[F10:37]|     1. 状态栏显示 `Thinking...` `[F5:290]`。
+[F10:38]|     2. API 返回结果。
+[F10:39]|     3. AI 的回复中，代码部分应能正常换行（CSS `pre-wrap` 验证 `[F8:209]`）。
+[F10:40]| 
+[F10:41]| ---
+[F10:42]| 
+[F10:43]| ### 3. 给您的调试小贴士
+[F10:44]| 
+[F10:45]| 由于扩展程序的侧边栏调试稍微隐蔽一点：
+[F10:46]| 1.  在侧边栏的空白处**右键 -> 检查 (Inspect)**。
+[F10:47]| 2.  这会打开侧边栏专属的开发者工具。
+[F10:48]| 3.  在 **Console** 面板，您可以看到 `script.js` 发出的所有错误。如果 API 调用失败，报错信息会在这里显示（例如 `401 Unauthorized` 或网络跨域问题）。
+
+================================================================================
+文件路径: todo.md(F11) (约合大小: 0 KB)
+================================================================================
+[F11:1]| # Rail 迭代计划 (Current Focus)
+[F11:2]| 
+[F11:3]| ## 1. 增强型 System Prompt 落地
+[F11:4]| - [ ] 将 `system_prompt.txt` 更新为“执行 GPS”模式，强化对当前任务的约束。
+[F11:5]| - [ ] 在 Prompt 中加入“下一步影响分析”指令。
+[F11:6]| 
+[F11:7]| ## 2. 结构化任务拆解 (Structural Decomposition)
+[F11:8]| - [ ] **UI 增强**：在每个 `.task-item` 中增加一个“拆解”图标/按钮。
+[F11:9]| - [ ] **拆解逻辑**：
+[F11:10]| 	- 点击拆解时，将该任务文本作为 `user` 消息，并配合特定的 `decomposition_prompt` 调用 API。
+[F11:11]| 	- AI 返回子任务列表（JSON 或换行文本）。
+[F11:12]| 	- 自动调用 `ingestTasks()` 将子任务插入当前任务下方。
+[F11:13]| 
+[F11:14]| ## 3. 部署与环境同步
+[F11:15]| - [ ] 确保 `manifest.json` 与 `manifest.webmanifest` 的版本号同步。
+[F11:16]| - [ ] 验证 Service Worker 在非 localhost 环境下的 HTTPS 限制。
+
+================================================================================
+文件路径: github\copilotrule.md(F12) (约合大小: 2 KB)
+================================================================================
+[F12:1]| # Project Rail - AI Instructions
+[F12:2]| 
+[F12:3]| ## 1. Project Identity
+[F12:4]| You are the lead developer for "Rail", a Chrome Extension designed to be a "Context Anchor" and "Execution GPS" for developers.
+[F12:5]| - **Core Philosophy**: Minimalist, Dark Mode, Local-First, One-Time Use (Disposable).
+[F12:6]| - **Tech Stack**: Vanilla JS (ES6+), HTML5, CSS3 (Flexbox), Chrome Extension Manifest V3. No React/Vue/Bundlers for the MVP.
+[F12:7]| 
+[F12:8]| ## 2. Architecture & Files
+[F12:9]| - **manifest.json**: Needs `sidePanel`, `activeTab`, `scripting`, `storage` permissions.
+[F12:10]| - **sidepanel.html**: The main UI.
+[F12:11]|   - Top 60%: Task List (Scrollable).
+[F12:12]|   - Bottom 40%: Chat Interface (Fixed).
+[F12:13]| - **styles.css**: VS Code-like Dark Mode theme. Colors: Bg `#1e1e1e`, Accent `#3b82f6`.
+[F12:14]| - **script.js**: Contains all logic for DOM manipulation, LocalStorage, and API calls.
+[F12:15]| 
+[F12:16]| ## 3. Core Features (The "Must-Haves")
+[F12:17]| ### A. Task List Logic
+[F12:18]| - **Data Structure**: Array of objects `{ id, text, status: 'pending'|'done', context_payload: {} }`.
+[F12:19]| - **Interaction**: Click to toggle done/active.
+[F12:20]| - **Smart Ingestion**: 
+[F12:21]|   - Allow users to paste raw text.
+[F12:22]|   - **Rule**: If raw text is pasted, simply split by newlines for the MVP (or call LLM if API key is present).
+[F12:23]| 
+[F12:24]| ### B. Chat & Context (BYOK)
+[F12:25]| - **Settings**: Store OpenAI API Key & Base URL in `localStorage`.
+[F12:26]| - **Context Injection**: When user asks a question in the chat input:
+[F12:27]|   1. Grab the currently **Active** task text.
+[F12:28]|   2. Grab the User's question.
+[F12:29]|   3. Construct System Prompt: "You are an execution assistant. Context Task: [Active Task]..."
+[F12:30]|   4. Call API (`POST /v1/chat/completions`).
+[F12:31]| 
+[F12:32]| ## 4. Coding Standards (Strict)
+[F12:33]| - **Error Handling**: Always check if API Key exists before calling API. Alert user if missing.
+[F12:34]| - **UI Feedback**: Show a loading spinner or text when waiting for API response.
+[F12:35]| - **Clean Code**: Keep logic in `script.js`. Use readable variable names. Comments are required for complex logic.
+[F12:36]| 
+[F12:37]| ## 5. Tone & Style
+[F12:38]| - Be concise.
+[F12:39]| - Focus on shipping working code.
+[F12:40]| - If I ask for a feature, implement it directly in the existing file structure.
 
 ## 统计信息
-- 包含文件数: 6
-- 总大小: 13 KB
+- 包含文件数: 12
+- 总大小: 29 KB

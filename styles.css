@@ -126,6 +126,22 @@ button:hover {
 .chat-toolbar {
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
+}
+
+.clear-chat {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.clear-chat:hover {
+  background: var(--panel);
+  color: var(--text);
 }
 
 .settings-toggle {
@@ -137,6 +153,11 @@ button:hover {
   cursor: pointer;
 }
 
+.settings-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
 .settings-toggle:hover {
   background: var(--panel);
   color: var(--text);
@@ -144,13 +165,45 @@ button:hover {
 
 .settings {
   display: none;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 8px;
-  align-items: end;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--bg);
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
 }
 
 .settings.visible {
-  display: grid;
+  display: flex;
+}
+
+.provider-manager {
+  display: flex;
+  gap: 6px;
+}
+
+.provider-manager select {
+  flex: 1;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+
+.provider-action {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.provider-action:hover {
+  background: var(--panel);
+  color: var(--text);
 }
 
 .settings label {
@@ -185,6 +238,8 @@ button:hover {
   border-radius: 10px;
   max-width: 90%;
   line-height: 1.4;
+  white-space: pre-wrap;
+  font-family: inherit;
 }
 
 .chat-bubble.user {

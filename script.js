@@ -1,27 +1,52 @@
 const TASKS_KEY = "rail_tasks";
 const ACTIVE_TASK_KEY = "rail_active_task_id";
-const API_KEY_STORAGE = "rail_api_key";
-const BASE_URL_STORAGE = "rail_base_url";
+const PROVIDERS_KEY = "rail_providers";
+const ACTIVE_PROVIDER_INDEX = "rail_current_provider_idx";
 const TEMP_CHAT_KEY = "rail_temp_chat";
 const DEFAULT_BASE_URL = "https://api.openai.com";
 const DEFAULT_MODEL = "gpt-4o-mini";
+const PROMPT_PATH = "system_prompt.txt";
+const DEFAULT_SYSTEM_PROMPT_TEMPLATE = `You are Rail, a developer's Execution GPS.
+
+[MACRO GOAL / PROGRESS]
+Total tasks in project: {TOTAL_TASKS}
+Completed: {DONE_TASKS}/{TOTAL_TASKS}
+
+[NEXT STEPS IN PIPELINE]
+{PENDING_TASKS}
+
+[CURRENT FOCUS (CRITICAL)]
+The user is currently working on: "{ACTIVE_TASK}"
+
+[INSTRUCTION]
+1. Your answers MUST align with the Current Focus.
+2. Use the Macro Goal and Next Steps only as background context to ensure consistency.
+3. Be a minimalist. Give high-density, low-fluff code.`;
 
 let tasks = [];
 let activeTaskId = null;
 let chatHistory = [];
+let systemPromptTemplate = DEFAULT_SYSTEM_PROMPT_TEMPLATE;
+let providers = [];
+let currentProviderIdx = 0;
 
 const taskInput = document.getElementById("task-input");
 const addTasksButton = document.getElementById("add-tasks");
 const taskList = document.getElementById("task-list");
 const apiKeyInput = document.getElementById("api-key");
 const baseUrlInput = document.getElementById("base-url");
+const modelInput = document.getElementById("model");
 const saveSettingsButton = document.getElementById("save-settings");
+const providerSelect = document.getElementById("provider-select");
+const addProviderButton = document.getElementById("add-provider");
+const deleteProviderButton = document.getElementById("delete-provider");
 const chatMessages = document.getElementById("chat-messages");
 const chatStatus = document.getElementById("chat-status");
 const chatInput = document.getElementById("chat-input");
 const sendChatButton = document.getElementById("send-chat");
 const toggleSettingsButton = document.getElementById("toggle-settings");
 const settingsPanel = document.querySelector(".settings");
+const clearChatButton = document.getElementById("clear-chat");
 
 function loadTasks() {
   try {
@@ -138,12 +163,20 @@ function ingestTasks() {
 
   // MVP rule: split raw text by newline into tasks.
   const lines = rawText.split(/\r?\n/).map((line) => line.trim());
-  const newTasks = lines.filter(Boolean).map((text, index) => ({
-    id: Date.now() + index,
-    text,
-    status: "pending",
-    context_payload: {},
-  }));
+  const newTasks = lines
+    .filter(Boolean)
+    .map((text, index) => {
+      const cleanedText = text.replace(
+        /^([-*+]|\d+\.)\s+(\[[\s_xX]\]\s+)?/i,
+        ""
+      );
+      return {
+        id: Date.now() + index,
+        text: cleanedText,
+        status: "pending",
+        context_payload: {},
+      };
+    });
 
   tasks = [...tasks, ...newTasks];
   taskInput.value = "";
@@ -157,14 +190,77 @@ function ingestTasks() {
 }
 
 function loadSettings() {
-  apiKeyInput.value = localStorage.getItem(API_KEY_STORAGE) || "";
-  baseUrlInput.value =
-    localStorage.getItem(BASE_URL_STORAGE) || DEFAULT_BASE_URL;
+  const raw = localStorage.getItem(PROVIDERS_KEY);
+  providers = raw
+    ? JSON.parse(raw)
+    : [
+        {
+          name: "Default",
+          key: "",
+          url: DEFAULT_BASE_URL,
+          model: DEFAULT_MODEL,
+        },
+      ];
+  currentProviderIdx = Number(localStorage.getItem(ACTIVE_PROVIDER_INDEX)) || 0;
+  if (currentProviderIdx >= providers.length) {
+    currentProviderIdx = 0;
+  }
+  renderProviderOptions();
+  fillSettingsFields();
 }
 
 function saveSettings() {
-  localStorage.setItem(API_KEY_STORAGE, apiKeyInput.value.trim());
-  localStorage.setItem(BASE_URL_STORAGE, baseUrlInput.value.trim());
+  const provider = providers[currentProviderIdx];
+  provider.key = apiKeyInput.value.trim();
+  provider.url = baseUrlInput.value.trim();
+  provider.model = modelInput.value.trim();
+  localStorage.setItem(PROVIDERS_KEY, JSON.stringify(providers));
+  localStorage.setItem(ACTIVE_PROVIDER_INDEX, String(currentProviderIdx));
+  renderProviderOptions();
+}
+
+function renderProviderOptions() {
+  providerSelect.innerHTML = providers
+    .map((provider, index) => {
+      const selected = index === currentProviderIdx ? "selected" : "";
+      const name = provider.name?.trim() || `Config ${index + 1}`;
+      return `<option value="${index}" ${selected}>${name}</option>`;
+    })
+    .join("");
+}
+
+function fillSettingsFields() {
+  const provider = providers[currentProviderIdx];
+  apiKeyInput.value = provider?.key || "";
+  baseUrlInput.value = provider?.url || DEFAULT_BASE_URL;
+  modelInput.value = provider?.model || DEFAULT_MODEL;
+}
+
+function addProvider() {
+  const name = prompt("Provider Name:", "New Config");
+  if (!name) {
+    return;
+  }
+  providers.push({
+    name,
+    key: "",
+    url: DEFAULT_BASE_URL,
+    model: DEFAULT_MODEL,
+  });
+  currentProviderIdx = providers.length - 1;
+  saveSettings();
+  fillSettingsFields();
+}
+
+function deleteProvider() {
+  if (providers.length <= 1) {
+    alert("At least one provider is required.");
+    return;
+  }
+  providers.splice(currentProviderIdx, 1);
+  currentProviderIdx = Math.max(0, currentProviderIdx - 1);
+  saveSettings();
+  fillSettingsFields();
 }
 
 function appendMessage(role, content) {
@@ -176,6 +272,42 @@ function appendMessage(role, content) {
   persistChatHistory();
 }
 
+async function loadSystemPrompt() {
+  try {
+    const promptUrl =
+      typeof chrome !== "undefined" && chrome.runtime?.getURL
+        ? chrome.runtime.getURL(PROMPT_PATH)
+        : PROMPT_PATH;
+    const response = await fetch(promptUrl);
+    if (!response.ok) {
+      return;
+    }
+    const text = await response.text();
+    if (text && text.trim()) {
+      systemPromptTemplate = text.trim();
+    }
+  } catch (error) {
+    systemPromptTemplate = DEFAULT_SYSTEM_PROMPT_TEMPLATE;
+  }
+}
+
+function buildSystemPrompt(activeTaskText) {
+  const template = systemPromptTemplate || DEFAULT_SYSTEM_PROMPT_TEMPLATE;
+  const totalTasks = tasks.length;
+  const doneTasks = tasks.filter((task) => task.status === "done").length;
+  const pendingTasks = tasks
+    .filter((task) => task.status === "pending")
+    .map((task) => `- ${task.text}`)
+    .join("\n");
+  const pendingText = pendingTasks || "All tasks completed!";
+
+  return template
+    .replaceAll("{TOTAL_TASKS}", String(totalTasks))
+    .replaceAll("{DONE_TASKS}", String(doneTasks))
+    .replaceAll("{PENDING_TASKS}", pendingText)
+    .replaceAll("{ACTIVE_TASK}", activeTaskText);
+}
+
 function persistChatHistory() {
   localStorage.setItem(TEMP_CHAT_KEY, JSON.stringify(chatHistory));
 }
@@ -184,8 +316,14 @@ function clearChatContext() {
   chatHistory = [];
   chatMessages.innerHTML = "";
   localStorage.removeItem(TEMP_CHAT_KEY);
-  chatHistory.push({ role: "system", content: "Context switched. Memory cleared." });
   appendMessage("system", "Context switched. Memory cleared.");
+}
+
+function clearChatHistory() {
+  chatHistory = [];
+  chatMessages.innerHTML = "";
+  localStorage.removeItem(TEMP_CHAT_KEY);
+  appendMessage("system", "Chat cleared.");
 }
 
 function restoreChatHistory() {
@@ -215,6 +353,9 @@ async function sendChat() {
   }
 
   const baseUrl = baseUrlInput.value.trim() || DEFAULT_BASE_URL;
+  const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
+  const endpointUrl = `${normalizedBaseUrl}/chat/completions`;
+  const model = modelInput.value.trim() || DEFAULT_MODEL;
   const activeTask = tasks.find((task) => task.id === activeTaskId);
   const activeTaskText = activeTask ? activeTask.text : "None";
 
@@ -223,24 +364,19 @@ async function sendChat() {
   chatStatus.textContent = "Thinking...";
 
   // Inject active task context into the system prompt.
-  const systemPrompt = `You are a coding assistant dedicated to the Single Active Task below.
-[ACTIVE TASK]: "${activeTaskText}"
-[INSTRUCTION]:
-- Focus ONLY on this task. Forget previous tasks.
-- If I ask to fix code, assume I will paste it next.
-- Be concise and code-first.`;
+  const systemPrompt = buildSystemPrompt(activeTaskText);
 
   chatHistory.push({ role: "user", content: question });
 
   try {
-    const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+    const response = await fetch(endpointUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: DEFAULT_MODEL,
+        model,
         messages: [{ role: "system", content: systemPrompt }, ...chatHistory],
       }),
     });
@@ -268,6 +404,14 @@ sendChatButton.addEventListener("click", sendChat);
 toggleSettingsButton.addEventListener("click", () => {
   settingsPanel.classList.toggle("visible");
 });
+clearChatButton.addEventListener("click", clearChatHistory);
+providerSelect.addEventListener("change", (event) => {
+  currentProviderIdx = Number(event.target.value);
+  fillSettingsFields();
+  localStorage.setItem(ACTIVE_PROVIDER_INDEX, String(currentProviderIdx));
+});
+addProviderButton.addEventListener("click", addProvider);
+deleteProviderButton.addEventListener("click", deleteProvider);
 chatInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     sendChat();
@@ -279,4 +423,8 @@ document.addEventListener("DOMContentLoaded", () => {
   loadSettings();
   renderTasks();
   restoreChatHistory();
+  loadSystemPrompt();
+  if ("serviceWorker" in navigator && window.location.protocol !== "chrome-extension:") {
+    navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+  }
 });
