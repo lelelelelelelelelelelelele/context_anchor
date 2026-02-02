@@ -22,16 +22,20 @@
 --- LineMark Manifest ---
 F1: manifest.json
 F2: manifest.webmanifest
-F3: plan.md
-F4: README.md
-F5: script.js
-F6: service-worker.js
-F7: sidepanel.html
-F8: styles.css
-F9: system_prompt.txt
-F10: test.md
-F11: todo.md
-F12: github/copilotrule.md
+F3: marked.min.js
+F4: package-lock.json
+F5: package.json
+F6: plan.md
+F7: README.md
+F8: script.js
+F9: service-worker.js
+F10: sidepanel.html
+F11: styles.css
+F12: system_prompt.txt
+F13: task_ingest_test_cases.md
+F14: test.md
+F15: todo.md
+F16: github/copilotrule.md
 -----------------------
 - 配置文件: context_config.yaml
 
@@ -42,12 +46,16 @@ F12: github/copilotrule.md
 ├── README.md
 ├── manifest.json
 ├── manifest.webmanifest
+├── marked.min.js
+├── package-lock.json
+├── package.json
 ├── plan.md
 ├── script.js
 ├── service-worker.js
 ├── sidepanel.html
 ├── styles.css
 ├── system_prompt.txt
+├── task_ingest_test_cases.md
 ├── test.md
 └── todo.md
 ```
@@ -87,1163 +95,2271 @@ F12: github/copilotrule.md
 [F2:10]| }
 
 ================================================================================
-文件路径: plan.md(F3) (约合大小: 5 KB)
+文件路径: marked.min.js(F3) (约合大小: 40 KB)
 ================================================================================
-[F3:1]| 明白了，这次我完全理解了：您需要的是**“多 Provider（服务商）管理系统”**。
-[F3:2]| 
-[F3:3]| 您手动输入 `modelname`（默认为 `gemini`），但希望能够预设**多组 API Key + Base URL**。在对话前或设置中，您可以自由切换当前使用的是哪一组配置。
-[F3:4]| 
-[F3:5]| 以下是针对这一逻辑的深度重构方案：
-[F3:6]| 
-[F3:7]| ### 1. 修改 HTML 结构：增加 Provider 切换与管理
-[F3:8]| 我们将设置区域改为“配置列表 + 编辑区”的模式。
-[F3:9]| 
-[F3:10]| **修改 `sidepanel.html` `[F7:31-45]`：**
-[F3:11]| ```html
-[F3:12]| [F7:31]|         <div class="settings">
-[F3:13]| [F7:31.1]|          <div class="provider-manager">
-[F3:14]| [F7:31.2]|            <select id="provider-select"></select>
-[F3:15]| [F7:31.3]|            <button id="add-provider" title="New Provider">+</button>
-[F3:16]| [F7:31.4]|            <button id="delete-provider" title="Delete Current">×</button>
-[F3:17]| [F7:31.5]|          </div>
-[F3:18]| [F7:32]|           <label>
-[F3:19]| [F7:33]|             API Key
-[F3:20]| [F7:34]|             <input id="api-key" type="password" placeholder="sk-..." />
-[F3:21]| [F7:35]|           </label>
-[F3:22]| [F7:36]|           <label>
-[F3:23]| [F7:37]|             Base URL
-[F3:24]| [F7:38]|             <input id="base-url" type="text" placeholder="https://api.openai.com" />
-[F3:25]| [F7:39]|           </label>
-[F3:26]| [F7:40]|           <label>
-[F3:27]| [F7:41]|             Model Name
-[F3:28]| [F7:42]|             <input id="model" type="text" placeholder="gemini-pro" />
-[F3:29]| [F7:43]|           </label>
-[F3:30]| [F7:44]|           <button id="save-settings">Save Provider</button>
-[F3:31]| [F7:45]|         </div>
-[F3:32]| ```
-[F3:33]| 
-[F3:34]| ### 2. 修改脚本逻辑：支持多配置存储
-[F3:35]| 我们需要将原本的单配置改为数组存储。
-[F3:36]| 
-[F3:37]| **修改 `script.js` 中的常量与初始化 `[F5:3-8]`：**
-[F3:38]| ```javascript
-[F3:39]| [F5:3]| const PROVIDERS_KEY = "rail_providers";
-[F3:40]| [F5:4]| const ACTIVE_PROVIDER_INDEX = "rail_current_provider_idx";
-[F3:41]| [F5:8]| const DEFAULT_MODEL = "gemini"; // 默认模型设为 gemini
-[F3:42]| [F5:8.1]| let providers = [];
-[F3:43]| [F5:8.2]| let currentProviderIdx = 0;
-[F3:44]| ```
-[F3:45]| 
-[F3:46]| **重构 `loadSettings` 和 `saveSettings` `[F5:188-199]`：**
-[F3:47]| ```javascript
-[F3:48]| [F5:188]| function loadSettings() {
-[F3:49]| [F5:188.1]|   const raw = localStorage.getItem(PROVIDERS_KEY);
-[F3:50]| [F5:188.2]|   providers = raw ? JSON.parse(raw) : [{ name: "Default", key: "", url: DEFAULT_BASE_URL, model: DEFAULT_MODEL }];
-[F3:51]| [F5:188.3]|   currentProviderIdx = Number(localStorage.getItem(ACTIVE_PROVIDER_INDEX)) || 0;
-[F3:52]| [F5:188.4]|   renderProviderOptions();
-[F3:53]| [F5:188.5]|   fillSettingsFields();
-[F3:54]| [F5:189]| }
-[F3:55]| [F5:190]| 
-[F3:56]| [F5:191]| function renderProviderOptions() {
-[F3:57]| [F5:191.1]|   const select = document.getElementById("provider-select");
-[F3:58]| [F5:191.2]|   select.innerHTML = providers.map((p, i) => `<option value="${i}" ${i === currentProviderIdx ? 'selected' : ''}>${p.name || ('Config ' + i)}</option>`).join('');
-[F3:59]| [F5:191.3]| }
-[F3:60]| [F5:192]| 
-[F3:61]| [F5:193]| function fillSettingsFields() {
-[F3:62]| [F5:193.1]|   const p = providers[currentProviderIdx];
-[F3:63]| [F5:193.2]|   apiKeyInput.value = p.key || "";
-[F3:64]| [F5:193.3]|   baseUrlInput.value = p.url || DEFAULT_BASE_URL;
-[F3:65]| [F5:193.4]|   modelInput.value = p.model || DEFAULT_MODEL;
-[F3:66]| [F5:193.5]| }
-[F3:67]| [F5:194]| 
-[F3:68]| [F5:195]| function saveSettings() {
-[F3:69]| [F5:195.1]|   const p = providers[currentProviderIdx];
-[F3:70]| [F5:195.2]|   p.key = apiKeyInput.value.trim();
-[F3:71]| [F5:195.3]|   p.url = baseUrlInput.value.trim();
-[F3:72]| [F5:195.4]|   p.model = modelInput.value.trim();
-[F3:73]| [F5:195.5]|   localStorage.setItem(PROVIDERS_KEY, JSON.stringify(providers));
-[F3:74]| [F5:195.6]|   localStorage.setItem(ACTIVE_PROVIDER_INDEX, currentProviderIdx);
-[F3:75]| [F5:195.7]|   renderProviderOptions();
-[F3:76]| [F5:196]| }
-[F3:77]| ```
-[F3:78]| 
-[F3:79]| **增加 Provider 切换监听 `[F5:338]` 之后：**
-[F3:80]| ```javascript
-[F3:81]| [F5:338.1]| document.getElementById("provider-select").addEventListener("change", (e) => {
-[F3:82]| [F5:338.2]|   currentProviderIdx = Number(e.target.value);
-[F3:83]| [F5:338.3]|   fillSettingsFields();
-[F3:84]| [F5:338.4]|   localStorage.setItem(ACTIVE_PROVIDER_INDEX, currentProviderIdx);
-[F3:85]| [F5:338.5]| });
-[F3:86]| [F5:338.6]| 
-[F3:87]| [F5:338.7]| document.getElementById("add-provider").addEventListener("click", () => {
-[F3:88]| [F5:338.8]|   const name = prompt("Provider Name:", "New Config");
-[F3:89]| [F5:338.9]|   if (name) {
-[F3:90]| [F5:338.10]|    providers.push({ name, key: "", url: DEFAULT_BASE_URL, model: DEFAULT_MODEL });
-[F3:91]| [F5:338.11]|    currentProviderIdx = providers.length - 1;
-[F3:92]| [F5:338.12]|    saveSettings();
-[F3:93]| [F5:338.13]|   }
-[F3:94]| [F5:338.14]| });
-[F3:95]| ```
-[F3:96]| 
-[F3:97]| ### 3. 修改 CSS：适配新的设置界面
-[F3:98]| 由于设置项增多，我们需要让 `settings` 区域更规整。
-[F3:99]| 
-[F3:100]| **修改 `styles.css` `[F8:166-175]`：**
-[F3:101]| ```css
-[F3:102]| [F8:166]| .settings {
-[F3:103]| [F8:167]|   display: none;
-[F3:104]| [F8:168]|   flex-direction: column; /* 改为垂直排列 */
-[F3:105]| [F8:169]|   gap: 12px;
-[F3:106]| [F8:170]|   background: var(--bg);
-[F3:107]| [F8:171]|   padding: 12px;
-[F3:108]| [F8:172]|   border: 1px solid var(--border);
-[F3:109]| [F8:173]|   border-radius: 8px;
-[F3:110]| [F8:174]| }
-[F3:111]| [F8:174.1]| .provider-manager {
-[F3:112]| [F8:174.2]|   display: flex;
-[F3:113]| [F8:174.3]|   gap: 4px;
-[F3:114]| [F8:174.4]| }
-[F3:115]| [F8:174.5]| .provider-manager select { flex: 1; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 4px; }
-[F3:116]| ```
-[F3:117]| 
-[F3:118]| ### 4. 修复图标 (补充)
-[F3:119]| **修改 `sidepanel.html` `[F7:28]`：**
-[F3:120]| ```html
-[F3:121]| [F7:28]| <span class="settings-icon" aria-hidden="true">&#9881;</span>
-[F3:122]| ```
-[F3:123]| 
-[F3:124]| ### 这样修改后的工作流：
-[F3:125]| 1.  **管理**：您可以点击 `+` 创建“我的 Gemini 官方”、“我的 转发 API”等多个条目。
-[F3:126]| 2.  **选择**：通过下拉菜单切换当前活跃的 Provider，下面的 Key 和 URL 会自动同步切换。
-[F3:127]| 3.  **发送**：`sendChat` 函数会自动使用 `providers[currentProviderIdx]` 里的数据。
-[F3:128]| 4.  **模型**：`Model Name` 依然是一个普通的 `input`，您可以随时改成 `gemini-1.5-pro` 或任何您需要的名称。
-[F3:129]| 
-[F3:130]| **您觉得这个“多条目管理”方案是否符合您“自行选择”的需求？**
+[F3:1]| /**
+[F3:2]|  * marked v17.0.1 - a markdown parser
+[F3:3]|  * Copyright (c) 2018-2025, MarkedJS. (MIT License)
+[F3:4]|  * Copyright (c) 2011-2018, Christopher Jeffrey. (MIT License)
+[F3:5]|  * https://github.com/markedjs/marked
+[F3:6]|  */
+[F3:7]| 
+[F3:8]| /**
+[F3:9]|  * DO NOT EDIT THIS FILE
+[F3:10]|  * The code in this file is generated from files in ./src/
+[F3:11]|  */
+[F3:12]| (function(g,f){if(typeof exports=="object"&&typeof module<"u"){module.exports=f()}else if("function"==typeof define && define.amd){define("marked",f)}else {g["marked"]=f()}}(typeof globalThis < "u" ? globalThis : typeof self < "u" ? self : this,function(){var exports={};var __exports=exports;var module={exports};
+[F3:13]| "use strict";var Z=Object.defineProperty;var xe=Object.getOwnPropertyDescriptor;var be=Object.getOwnPropertyNames;var Re=Object.prototype.hasOwnProperty;var Te=(l,e)=>{for(var t in e)Z(l,t,{get:e[t],enumerable:!0})},Oe=(l,e,t,n)=>{if(e&&typeof e=="object"||typeof e=="function")for(let r of be(e))!Re.call(l,r)&&r!==t&&Z(l,r,{get:()=>e[r],enumerable:!(n=xe(e,r))||n.enumerable});return l};var we=l=>Oe(Z({},"__esModule",{value:!0}),l);var kt={};Te(kt,{Hooks:()=>S,Lexer:()=>x,Marked:()=>A,Parser:()=>b,Renderer:()=>P,TextRenderer:()=>$,Tokenizer:()=>y,defaults:()=>T,getDefaults:()=>_,lexer:()=>ht,marked:()=>d,options:()=>it,parse:()=>pt,parseInline:()=>ut,parser:()=>ct,setOptions:()=>ot,use:()=>at,walkTokens:()=>lt});module.exports=we(kt);function _(){return{async:!1,breaks:!1,extensions:null,gfm:!0,hooks:null,pedantic:!1,renderer:null,silent:!1,tokenizer:null,walkTokens:null}}var T=_();function G(l){T=l}var I={exec:()=>null};function k(l,e=""){let t=typeof l=="string"?l:l.source,n={replace:(r,i)=>{let s=typeof i=="string"?i:i.source;return s=s.replace(m.caret,"$1"),t=t.replace(r,s),n},getRegex:()=>new RegExp(t,e)};return n}var ye=(()=>{try{return!!new RegExp("(?<=1)(?<!1)")}catch{return!1}})(),m={codeRemoveIndent:/^(?: {1,4}| {0,3}\t)/gm,outputLinkReplace:/\\([\[\]])/g,indentCodeCompensation:/^(\s+)(?:```)/,beginningSpace:/^\s+/,endingHash:/#$/,startingSpaceChar:/^ /,endingSpaceChar:/ $/,nonSpaceChar:/[^ ]/,newLineCharGlobal:/\n/g,tabCharGlobal:/\t/g,multipleSpaceGlobal:/\s+/g,blankLine:/^[ \t]*$/,doubleBlankLine:/\n[ \t]*\n[ \t]*$/,blockquoteStart:/^ {0,3}>/,blockquoteSetextReplace:/\n {0,3}((?:=+|-+) *)(?=\n|$)/g,blockquoteSetextReplace2:/^ {0,3}>[ \t]?/gm,listReplaceTabs:/^\t+/,listReplaceNesting:/^ {1,4}(?=( {4})*[^ ])/g,listIsTask:/^\[[ xX]\] +\S/,listReplaceTask:/^\[[ xX]\] +/,listTaskCheckbox:/\[[ xX]\]/,anyLine:/\n.*\n/,hrefBrackets:/^<(.*)>$/,tableDelimiter:/[:|]/,tableAlignChars:/^\||\| *$/g,tableRowBlankLine:/\n[ \t]*$/,tableAlignRight:/^ *-+: *$/,tableAlignCenter:/^ *:-+: *$/,tableAlignLeft:/^ *:-+ *$/,startATag:/^<a /i,endATag:/^<\/a>/i,startPreScriptTag:/^<(pre|code|kbd|script)(\s|>)/i,endPreScriptTag:/^<\/(pre|code|kbd|script)(\s|>)/i,startAngleBracket:/^</,endAngleBracket:/>$/,pedanticHrefTitle:/^([^'"]*[^\s])\s+(['"])(.*)\2/,unicodeAlphaNumeric:/[\p{L}\p{N}]/u,escapeTest:/[&<>"']/,escapeReplace:/[&<>"']/g,escapeTestNoEncode:/[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/,escapeReplaceNoEncode:/[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/g,unescapeTest:/&(#(?:\d+)|(?:#x[0-9A-Fa-f]+)|(?:\w+));?/ig,caret:/(^|[^\[])\^/g,percentDecode:/%25/g,findPipe:/\|/g,splitPipe:/ \|/,slashPipe:/\\\|/g,carriageReturn:/\r\n|\r/g,spaceLine:/^ +$/gm,notSpaceStart:/^\S*/,endingNewline:/\n$/,listItemRegex:l=>new RegExp(`^( {0,3}${l})((?:[	 ][^\\n]*)?(?:\\n|$))`),nextBulletRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}(?:[*+-]|\\d{1,9}[.)])((?:[ 	][^\\n]*)?(?:\\n|$))`),hrRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}((?:- *){3,}|(?:_ *){3,}|(?:\\* *){3,})(?:\\n+|$)`),fencesBeginRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}(?:\`\`\`|~~~)`),headingBeginRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}#`),htmlBeginRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}<(?:[a-z].*>|!--)`,"i")},Pe=/^(?:[ \t]*(?:\n|$))+/,Se=/^((?: {4}| {0,3}\t)[^\n]+(?:\n(?:[ \t]*(?:\n|$))*)?)+/,$e=/^ {0,3}(`{3,}(?=[^`\n]*(?:\n|$))|~{3,})([^\n]*)(?:\n|$)(?:|([\s\S]*?)(?:\n|$))(?: {0,3}\1[~`]* *(?=\n|$)|$)/,E=/^ {0,3}((?:-[\t ]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})(?:\n+|$)/,_e=/^ {0,3}(#{1,6})(?=\s|$)(.*)(?:\n+|$)/,Q=/(?:[*+-]|\d{1,9}[.)])/,se=/^(?!bull |blockCode|fences|blockquote|heading|html|table)((?:.|\n(?!\s*?\n|bull |blockCode|fences|blockquote|heading|html|table))+?)\n {0,3}(=+|-+) *(?:\n+|$)/,ie=k(se).replace(/bull/g,Q).replace(/blockCode/g,/(?: {4}| {0,3}\t)/).replace(/fences/g,/ {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g,/ {0,3}>/).replace(/heading/g,/ {0,3}#{1,6}/).replace(/html/g,/ {0,3}<[^\n>]+>\n/).replace(/\|table/g,"").getRegex(),Le=k(se).replace(/bull/g,Q).replace(/blockCode/g,/(?: {4}| {0,3}\t)/).replace(/fences/g,/ {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g,/ {0,3}>/).replace(/heading/g,/ {0,3}#{1,6}/).replace(/html/g,/ {0,3}<[^\n>]+>\n/).replace(/table/g,/ {0,3}\|?(?:[:\- ]*\|)+[\:\- ]*\n/).getRegex(),F=/^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list|html|table| +\n)[^\n]+)*)/,Me=/^[^\n]+/,j=/(?!\s*\])(?:\\[\s\S]|[^\[\]\\])+/,ze=k(/^ {0,3}\[(label)\]: *(?:\n[ \t]*)?([^<\s][^\s]*|<.*?>)(?:(?: +(?:\n[ \t]*)?| *\n[ \t]*)(title))? *(?:\n+|$)/).replace("label",j).replace("title",/(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))/).getRegex(),Ae=k(/^( {0,3}bull)([ \t][^\n]+?)?(?:\n|$)/).replace(/bull/g,Q).getRegex(),v="address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|meta|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul",U=/<!--(?:-?>|[\s\S]*?(?:-->|$))/,Ce=k("^ {0,3}(?:<(script|pre|style|textarea)[\\s>][\\s\\S]*?(?:</\\1>[^\\n]*\\n+|$)|comment[^\\n]*(\\n+|$)|<\\?[\\s\\S]*?(?:\\?>\\n*|$)|<![A-Z][\\s\\S]*?(?:>\\n*|$)|<!\\[CDATA\\[[\\s\\S]*?(?:\\]\\]>\\n*|$)|</?(tag)(?: +|\\n|/?>)[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|<(?!script|pre|style|textarea)([a-z][\\w-]*)(?:attribute)*? */?>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|</(?!script|pre|style|textarea)[a-z][\\w-]*\\s*>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$))","i").replace("comment",U).replace("tag",v).replace("attribute",/ +[a-zA-Z:_][\w.:-]*(?: *= *"[^"\n]*"| *= *'[^'\n]*'| *= *[^\s"'=<>`]+)?/).getRegex(),oe=k(F).replace("hr",E).replace("heading"," {0,3}#{1,6}(?:\\s|$)").replace("|lheading","").replace("|table","").replace("blockquote"," {0,3}>").replace("fences"," {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list"," {0,3}(?:[*+-]|1[.)]) ").replace("html","</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag",v).getRegex(),Ie=k(/^( {0,3}> ?(paragraph|[^\n]*)(?:\n|$))+/).replace("paragraph",oe).getRegex(),K={blockquote:Ie,code:Se,def:ze,fences:$e,heading:_e,hr:E,html:Ce,lheading:ie,list:Ae,newline:Pe,paragraph:oe,table:I,text:Me},ne=k("^ *([^\\n ].*)\\n {0,3}((?:\\| *)?:?-+:? *(?:\\| *:?-+:? *)*(?:\\| *)?)(?:\\n((?:(?! *\\n|hr|heading|blockquote|code|fences|list|html).*(?:\\n|$))*)\\n*|$)").replace("hr",E).replace("heading"," {0,3}#{1,6}(?:\\s|$)").replace("blockquote"," {0,3}>").replace("code","(?: {4}| {0,3}	)[^\\n]").replace("fences"," {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list"," {0,3}(?:[*+-]|1[.)]) ").replace("html","</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag",v).getRegex(),Ee={...K,lheading:Le,table:ne,paragraph:k(F).replace("hr",E).replace("heading"," {0,3}#{1,6}(?:\\s|$)").replace("|lheading","").replace("table",ne).replace("blockquote"," {0,3}>").replace("fences"," {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list"," {0,3}(?:[*+-]|1[.)]) ").replace("html","</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag",v).getRegex()},Be={...K,html:k(`^ *(?:comment *(?:\\n|\\s*$)|<(tag)[\\s\\S]+?</\\1> *(?:\\n{2,}|\\s*$)|<tag(?:"[^"]*"|'[^']*'|\\s[^'"/>\\s]*)*?/?> *(?:\\n{2,}|\\s*$))`).replace("comment",U).replace(/tag/g,"(?!(?:a|em|strong|small|s|cite|q|dfn|abbr|data|time|code|var|samp|kbd|sub|sup|i|b|u|mark|ruby|rt|rp|bdi|bdo|span|br|wbr|ins|del|img)\\b)\\w+(?!:|[^\\w\\s@]*@)\\b").getRegex(),def:/^ *\[([^\]]+)\]: *<?([^\s>]+)>?(?: +(["(][^\n]+[")]))? *(?:\n+|$)/,heading:/^(#{1,6})(.*)(?:\n+|$)/,fences:I,lheading:/^(.+?)\n {0,3}(=+|-+) *(?:\n+|$)/,paragraph:k(F).replace("hr",E).replace("heading",` *#{1,6} *[^
+[F3:14]| ]`).replace("lheading",ie).replace("|table","").replace("blockquote"," {0,3}>").replace("|fences","").replace("|list","").replace("|html","").replace("|tag","").getRegex()},qe=/^\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])/,ve=/^(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)/,ae=/^( {2,}|\\)\n(?!\s*$)/,De=/^(`+|[^`])(?:(?= {2,}\n)|[\s\S]*?(?:(?=[\\<!\[`*_]|\b_|$)|[^ ](?= {2,}\n)))/,D=/[\p{P}\p{S}]/u,W=/[\s\p{P}\p{S}]/u,le=/[^\s\p{P}\p{S}]/u,He=k(/^((?![*_])punctSpace)/,"u").replace(/punctSpace/g,W).getRegex(),ue=/(?!~)[\p{P}\p{S}]/u,Ze=/(?!~)[\s\p{P}\p{S}]/u,Ge=/(?:[^\s\p{P}\p{S}]|~)/u,Ne=k(/link|precode-code|html/,"g").replace("link",/\[(?:[^\[\]`]|(?<a>`+)[^`]+\k<a>(?!`))*?\]\((?:\\[\s\S]|[^\\\(\)]|\((?:\\[\s\S]|[^\\\(\)])*\))*\)/).replace("precode-",ye?"(?<!`)()":"(^^|[^`])").replace("code",/(?<b>`+)[^`]+\k<b>(?!`)/).replace("html",/<(?! )[^<>]*?>/).getRegex(),pe=/^(?:\*+(?:((?!\*)punct)|[^\s*]))|^_+(?:((?!_)punct)|([^\s_]))/,Qe=k(pe,"u").replace(/punct/g,D).getRegex(),Fe=k(pe,"u").replace(/punct/g,ue).getRegex(),ce="^[^_*]*?__[^_*]*?\\*[^_*]*?(?=__)|[^*]+(?=[^*])|(?!\\*)punct(\\*+)(?=[\\s]|$)|notPunctSpace(\\*+)(?!\\*)(?=punctSpace|$)|(?!\\*)punctSpace(\\*+)(?=notPunctSpace)|[\\s](\\*+)(?!\\*)(?=punct)|(?!\\*)punct(\\*+)(?!\\*)(?=punct)|notPunctSpace(\\*+)(?=notPunctSpace)",je=k(ce,"gu").replace(/notPunctSpace/g,le).replace(/punctSpace/g,W).replace(/punct/g,D).getRegex(),Ue=k(ce,"gu").replace(/notPunctSpace/g,Ge).replace(/punctSpace/g,Ze).replace(/punct/g,ue).getRegex(),Ke=k("^[^_*]*?\\*\\*[^_*]*?_[^_*]*?(?=\\*\\*)|[^_]+(?=[^_])|(?!_)punct(_+)(?=[\\s]|$)|notPunctSpace(_+)(?!_)(?=punctSpace|$)|(?!_)punctSpace(_+)(?=notPunctSpace)|[\\s](_+)(?!_)(?=punct)|(?!_)punct(_+)(?!_)(?=punct)","gu").replace(/notPunctSpace/g,le).replace(/punctSpace/g,W).replace(/punct/g,D).getRegex(),We=k(/\\(punct)/,"gu").replace(/punct/g,D).getRegex(),Xe=k(/^<(scheme:[^\s\x00-\x1f<>]*|email)>/).replace("scheme",/[a-zA-Z][a-zA-Z0-9+.-]{1,31}/).replace("email",/[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+(@)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?![-_])/).getRegex(),Je=k(U).replace("(?:-->|$)","-->").getRegex(),Ve=k("^comment|^</[a-zA-Z][\\w:-]*\\s*>|^<[a-zA-Z][\\w-]*(?:attribute)*?\\s*/?>|^<\\?[\\s\\S]*?\\?>|^<![a-zA-Z]+\\s[\\s\\S]*?>|^<!\\[CDATA\\[[\\s\\S]*?\\]\\]>").replace("comment",Je).replace("attribute",/\s+[a-zA-Z:_][\w.:-]*(?:\s*=\s*"[^"]*"|\s*=\s*'[^']*'|\s*=\s*[^\s"'=<>`]+)?/).getRegex(),q=/(?:\[(?:\\[\s\S]|[^\[\]\\])*\]|\\[\s\S]|`+[^`]*?`+(?!`)|[^\[\]\\`])*?/,Ye=k(/^!?\[(label)\]\(\s*(href)(?:(?:[ \t]*(?:\n[ \t]*)?)(title))?\s*\)/).replace("label",q).replace("href",/<(?:\\.|[^\n<>\\])+>|[^ \t\n\x00-\x1f]*/).replace("title",/"(?:\\"?|[^"\\])*"|'(?:\\'?|[^'\\])*'|\((?:\\\)?|[^)\\])*\)/).getRegex(),he=k(/^!?\[(label)\]\[(ref)\]/).replace("label",q).replace("ref",j).getRegex(),ke=k(/^!?\[(ref)\](?:\[\])?/).replace("ref",j).getRegex(),et=k("reflink|nolink(?!\\()","g").replace("reflink",he).replace("nolink",ke).getRegex(),re=/[hH][tT][tT][pP][sS]?|[fF][tT][pP]/,X={_backpedal:I,anyPunctuation:We,autolink:Xe,blockSkip:Ne,br:ae,code:ve,del:I,emStrongLDelim:Qe,emStrongRDelimAst:je,emStrongRDelimUnd:Ke,escape:qe,link:Ye,nolink:ke,punctuation:He,reflink:he,reflinkSearch:et,tag:Ve,text:De,url:I},tt={...X,link:k(/^!?\[(label)\]\((.*?)\)/).replace("label",q).getRegex(),reflink:k(/^!?\[(label)\]\s*\[([^\]]*)\]/).replace("label",q).getRegex()},N={...X,emStrongRDelimAst:Ue,emStrongLDelim:Fe,url:k(/^((?:protocol):\/\/|www\.)(?:[a-zA-Z0-9\-]+\.?)+[^\s<]*|^email/).replace("protocol",re).replace("email",/[A-Za-z0-9._+-]+(@)[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]*[a-zA-Z0-9])+(?![-_])/).getRegex(),_backpedal:/(?:[^?!.,:;*_'"~()&]+|\([^)]*\)|&(?![a-zA-Z0-9]+;$)|[?!.,:;*_'"~)]+(?!$))+/,del:/^(~~?)(?=[^\s~])((?:\\[\s\S]|[^\\])*?(?:\\[\s\S]|[^\s~\\]))\1(?=[^~]|$)/,text:k(/^([`~]+|[^`~])(?:(?= {2,}\n)|(?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)|[\s\S]*?(?:(?=[\\<!\[`*~_]|\b_|protocol:\/\/|www\.|$)|[^ ](?= {2,}\n)|[^a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-](?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)))/).replace("protocol",re).getRegex()},nt={...N,br:k(ae).replace("{2,}","*").getRegex(),text:k(N.text).replace("\\b_","\\b_| {2,}\\n").replace(/\{2,\}/g,"*").getRegex()},B={normal:K,gfm:Ee,pedantic:Be},M={normal:X,gfm:N,breaks:nt,pedantic:tt};var rt={"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"},de=l=>rt[l];function w(l,e){if(e){if(m.escapeTest.test(l))return l.replace(m.escapeReplace,de)}else if(m.escapeTestNoEncode.test(l))return l.replace(m.escapeReplaceNoEncode,de);return l}function J(l){try{l=encodeURI(l).replace(m.percentDecode,"%")}catch{return null}return l}function V(l,e){let t=l.replace(m.findPipe,(i,s,a)=>{let o=!1,u=s;for(;--u>=0&&a[u]==="\\";)o=!o;return o?"|":" |"}),n=t.split(m.splitPipe),r=0;if(n[0].trim()||n.shift(),n.length>0&&!n.at(-1)?.trim()&&n.pop(),e)if(n.length>e)n.splice(e);else for(;n.length<e;)n.push("");for(;r<n.length;r++)n[r]=n[r].trim().replace(m.slashPipe,"|");return n}function z(l,e,t){let n=l.length;if(n===0)return"";let r=0;for(;r<n;){let i=l.charAt(n-r-1);if(i===e&&!t)r++;else if(i!==e&&t)r++;else break}return l.slice(0,n-r)}function ge(l,e){if(l.indexOf(e[1])===-1)return-1;let t=0;for(let n=0;n<l.length;n++)if(l[n]==="\\")n++;else if(l[n]===e[0])t++;else if(l[n]===e[1]&&(t--,t<0))return n;return t>0?-2:-1}function fe(l,e,t,n,r){let i=e.href,s=e.title||null,a=l[1].replace(r.other.outputLinkReplace,"$1");n.state.inLink=!0;let o={type:l[0].charAt(0)==="!"?"image":"link",raw:t,href:i,title:s,text:a,tokens:n.inlineTokens(a)};return n.state.inLink=!1,o}function st(l,e,t){let n=l.match(t.other.indentCodeCompensation);if(n===null)return e;let r=n[1];return e.split(`
+[F3:15]| `).map(i=>{let s=i.match(t.other.beginningSpace);if(s===null)return i;let[a]=s;return a.length>=r.length?i.slice(r.length):i}).join(`
+[F3:16]| `)}var y=class{options;rules;lexer;constructor(e){this.options=e||T}space(e){let t=this.rules.block.newline.exec(e);if(t&&t[0].length>0)return{type:"space",raw:t[0]}}code(e){let t=this.rules.block.code.exec(e);if(t){let n=t[0].replace(this.rules.other.codeRemoveIndent,"");return{type:"code",raw:t[0],codeBlockStyle:"indented",text:this.options.pedantic?n:z(n,`
+[F3:17]| `)}}}fences(e){let t=this.rules.block.fences.exec(e);if(t){let n=t[0],r=st(n,t[3]||"",this.rules);return{type:"code",raw:n,lang:t[2]?t[2].trim().replace(this.rules.inline.anyPunctuation,"$1"):t[2],text:r}}}heading(e){let t=this.rules.block.heading.exec(e);if(t){let n=t[2].trim();if(this.rules.other.endingHash.test(n)){let r=z(n,"#");(this.options.pedantic||!r||this.rules.other.endingSpaceChar.test(r))&&(n=r.trim())}return{type:"heading",raw:t[0],depth:t[1].length,text:n,tokens:this.lexer.inline(n)}}}hr(e){let t=this.rules.block.hr.exec(e);if(t)return{type:"hr",raw:z(t[0],`
+[F3:18]| `)}}blockquote(e){let t=this.rules.block.blockquote.exec(e);if(t){let n=z(t[0],`
+[F3:19]| `).split(`
+[F3:20]| `),r="",i="",s=[];for(;n.length>0;){let a=!1,o=[],u;for(u=0;u<n.length;u++)if(this.rules.other.blockquoteStart.test(n[u]))o.push(n[u]),a=!0;else if(!a)o.push(n[u]);else break;n=n.slice(u);let p=o.join(`
+[F3:21]| `),c=p.replace(this.rules.other.blockquoteSetextReplace,`
+[F3:22]|     $1`).replace(this.rules.other.blockquoteSetextReplace2,"");r=r?`${r}
+[F3:23]| ${p}`:p,i=i?`${i}
+[F3:24]| ${c}`:c;let g=this.lexer.state.top;if(this.lexer.state.top=!0,this.lexer.blockTokens(c,s,!0),this.lexer.state.top=g,n.length===0)break;let h=s.at(-1);if(h?.type==="code")break;if(h?.type==="blockquote"){let R=h,f=R.raw+`
+[F3:25]| `+n.join(`
+[F3:26]| `),O=this.blockquote(f);s[s.length-1]=O,r=r.substring(0,r.length-R.raw.length)+O.raw,i=i.substring(0,i.length-R.text.length)+O.text;break}else if(h?.type==="list"){let R=h,f=R.raw+`
+[F3:27]| `+n.join(`
+[F3:28]| `),O=this.list(f);s[s.length-1]=O,r=r.substring(0,r.length-h.raw.length)+O.raw,i=i.substring(0,i.length-R.raw.length)+O.raw,n=f.substring(s.at(-1).raw.length).split(`
+[F3:29]| `);continue}}return{type:"blockquote",raw:r,tokens:s,text:i}}}list(e){let t=this.rules.block.list.exec(e);if(t){let n=t[1].trim(),r=n.length>1,i={type:"list",raw:"",ordered:r,start:r?+n.slice(0,-1):"",loose:!1,items:[]};n=r?`\\d{1,9}\\${n.slice(-1)}`:`\\${n}`,this.options.pedantic&&(n=r?n:"[*+-]");let s=this.rules.other.listItemRegex(n),a=!1;for(;e;){let u=!1,p="",c="";if(!(t=s.exec(e))||this.rules.block.hr.test(e))break;p=t[0],e=e.substring(p.length);let g=t[2].split(`
+[F3:30]| `,1)[0].replace(this.rules.other.listReplaceTabs,O=>" ".repeat(3*O.length)),h=e.split(`
+[F3:31]| `,1)[0],R=!g.trim(),f=0;if(this.options.pedantic?(f=2,c=g.trimStart()):R?f=t[1].length+1:(f=t[2].search(this.rules.other.nonSpaceChar),f=f>4?1:f,c=g.slice(f),f+=t[1].length),R&&this.rules.other.blankLine.test(h)&&(p+=h+`
+[F3:32]| `,e=e.substring(h.length+1),u=!0),!u){let O=this.rules.other.nextBulletRegex(f),Y=this.rules.other.hrRegex(f),ee=this.rules.other.fencesBeginRegex(f),te=this.rules.other.headingBeginRegex(f),me=this.rules.other.htmlBeginRegex(f);for(;e;){let H=e.split(`
+[F3:33]| `,1)[0],C;if(h=H,this.options.pedantic?(h=h.replace(this.rules.other.listReplaceNesting,"  "),C=h):C=h.replace(this.rules.other.tabCharGlobal,"    "),ee.test(h)||te.test(h)||me.test(h)||O.test(h)||Y.test(h))break;if(C.search(this.rules.other.nonSpaceChar)>=f||!h.trim())c+=`
+[F3:34]| `+C.slice(f);else{if(R||g.replace(this.rules.other.tabCharGlobal,"    ").search(this.rules.other.nonSpaceChar)>=4||ee.test(g)||te.test(g)||Y.test(g))break;c+=`
+[F3:35]| `+h}!R&&!h.trim()&&(R=!0),p+=H+`
+[F3:36]| `,e=e.substring(H.length+1),g=C.slice(f)}}i.loose||(a?i.loose=!0:this.rules.other.doubleBlankLine.test(p)&&(a=!0)),i.items.push({type:"list_item",raw:p,task:!!this.options.gfm&&this.rules.other.listIsTask.test(c),loose:!1,text:c,tokens:[]}),i.raw+=p}let o=i.items.at(-1);if(o)o.raw=o.raw.trimEnd(),o.text=o.text.trimEnd();else return;i.raw=i.raw.trimEnd();for(let u of i.items){if(this.lexer.state.top=!1,u.tokens=this.lexer.blockTokens(u.text,[]),u.task){if(u.text=u.text.replace(this.rules.other.listReplaceTask,""),u.tokens[0]?.type==="text"||u.tokens[0]?.type==="paragraph"){u.tokens[0].raw=u.tokens[0].raw.replace(this.rules.other.listReplaceTask,""),u.tokens[0].text=u.tokens[0].text.replace(this.rules.other.listReplaceTask,"");for(let c=this.lexer.inlineQueue.length-1;c>=0;c--)if(this.rules.other.listIsTask.test(this.lexer.inlineQueue[c].src)){this.lexer.inlineQueue[c].src=this.lexer.inlineQueue[c].src.replace(this.rules.other.listReplaceTask,"");break}}let p=this.rules.other.listTaskCheckbox.exec(u.raw);if(p){let c={type:"checkbox",raw:p[0]+" ",checked:p[0]!=="[ ]"};u.checked=c.checked,i.loose?u.tokens[0]&&["paragraph","text"].includes(u.tokens[0].type)&&"tokens"in u.tokens[0]&&u.tokens[0].tokens?(u.tokens[0].raw=c.raw+u.tokens[0].raw,u.tokens[0].text=c.raw+u.tokens[0].text,u.tokens[0].tokens.unshift(c)):u.tokens.unshift({type:"paragraph",raw:c.raw,text:c.raw,tokens:[c]}):u.tokens.unshift(c)}}if(!i.loose){let p=u.tokens.filter(g=>g.type==="space"),c=p.length>0&&p.some(g=>this.rules.other.anyLine.test(g.raw));i.loose=c}}if(i.loose)for(let u of i.items){u.loose=!0;for(let p of u.tokens)p.type==="text"&&(p.type="paragraph")}return i}}html(e){let t=this.rules.block.html.exec(e);if(t)return{type:"html",block:!0,raw:t[0],pre:t[1]==="pre"||t[1]==="script"||t[1]==="style",text:t[0]}}def(e){let t=this.rules.block.def.exec(e);if(t){let n=t[1].toLowerCase().replace(this.rules.other.multipleSpaceGlobal," "),r=t[2]?t[2].replace(this.rules.other.hrefBrackets,"$1").replace(this.rules.inline.anyPunctuation,"$1"):"",i=t[3]?t[3].substring(1,t[3].length-1).replace(this.rules.inline.anyPunctuation,"$1"):t[3];return{type:"def",tag:n,raw:t[0],href:r,title:i}}}table(e){let t=this.rules.block.table.exec(e);if(!t||!this.rules.other.tableDelimiter.test(t[2]))return;let n=V(t[1]),r=t[2].replace(this.rules.other.tableAlignChars,"").split("|"),i=t[3]?.trim()?t[3].replace(this.rules.other.tableRowBlankLine,"").split(`
+[F3:37]| `):[],s={type:"table",raw:t[0],header:[],align:[],rows:[]};if(n.length===r.length){for(let a of r)this.rules.other.tableAlignRight.test(a)?s.align.push("right"):this.rules.other.tableAlignCenter.test(a)?s.align.push("center"):this.rules.other.tableAlignLeft.test(a)?s.align.push("left"):s.align.push(null);for(let a=0;a<n.length;a++)s.header.push({text:n[a],tokens:this.lexer.inline(n[a]),header:!0,align:s.align[a]});for(let a of i)s.rows.push(V(a,s.header.length).map((o,u)=>({text:o,tokens:this.lexer.inline(o),header:!1,align:s.align[u]})));return s}}lheading(e){let t=this.rules.block.lheading.exec(e);if(t)return{type:"heading",raw:t[0],depth:t[2].charAt(0)==="="?1:2,text:t[1],tokens:this.lexer.inline(t[1])}}paragraph(e){let t=this.rules.block.paragraph.exec(e);if(t){let n=t[1].charAt(t[1].length-1)===`
+[F3:38]| `?t[1].slice(0,-1):t[1];return{type:"paragraph",raw:t[0],text:n,tokens:this.lexer.inline(n)}}}text(e){let t=this.rules.block.text.exec(e);if(t)return{type:"text",raw:t[0],text:t[0],tokens:this.lexer.inline(t[0])}}escape(e){let t=this.rules.inline.escape.exec(e);if(t)return{type:"escape",raw:t[0],text:t[1]}}tag(e){let t=this.rules.inline.tag.exec(e);if(t)return!this.lexer.state.inLink&&this.rules.other.startATag.test(t[0])?this.lexer.state.inLink=!0:this.lexer.state.inLink&&this.rules.other.endATag.test(t[0])&&(this.lexer.state.inLink=!1),!this.lexer.state.inRawBlock&&this.rules.other.startPreScriptTag.test(t[0])?this.lexer.state.inRawBlock=!0:this.lexer.state.inRawBlock&&this.rules.other.endPreScriptTag.test(t[0])&&(this.lexer.state.inRawBlock=!1),{type:"html",raw:t[0],inLink:this.lexer.state.inLink,inRawBlock:this.lexer.state.inRawBlock,block:!1,text:t[0]}}link(e){let t=this.rules.inline.link.exec(e);if(t){let n=t[2].trim();if(!this.options.pedantic&&this.rules.other.startAngleBracket.test(n)){if(!this.rules.other.endAngleBracket.test(n))return;let s=z(n.slice(0,-1),"\\");if((n.length-s.length)%2===0)return}else{let s=ge(t[2],"()");if(s===-2)return;if(s>-1){let o=(t[0].indexOf("!")===0?5:4)+t[1].length+s;t[2]=t[2].substring(0,s),t[0]=t[0].substring(0,o).trim(),t[3]=""}}let r=t[2],i="";if(this.options.pedantic){let s=this.rules.other.pedanticHrefTitle.exec(r);s&&(r=s[1],i=s[3])}else i=t[3]?t[3].slice(1,-1):"";return r=r.trim(),this.rules.other.startAngleBracket.test(r)&&(this.options.pedantic&&!this.rules.other.endAngleBracket.test(n)?r=r.slice(1):r=r.slice(1,-1)),fe(t,{href:r&&r.replace(this.rules.inline.anyPunctuation,"$1"),title:i&&i.replace(this.rules.inline.anyPunctuation,"$1")},t[0],this.lexer,this.rules)}}reflink(e,t){let n;if((n=this.rules.inline.reflink.exec(e))||(n=this.rules.inline.nolink.exec(e))){let r=(n[2]||n[1]).replace(this.rules.other.multipleSpaceGlobal," "),i=t[r.toLowerCase()];if(!i){let s=n[0].charAt(0);return{type:"text",raw:s,text:s}}return fe(n,i,n[0],this.lexer,this.rules)}}emStrong(e,t,n=""){let r=this.rules.inline.emStrongLDelim.exec(e);if(!r||r[3]&&n.match(this.rules.other.unicodeAlphaNumeric))return;if(!(r[1]||r[2]||"")||!n||this.rules.inline.punctuation.exec(n)){let s=[...r[0]].length-1,a,o,u=s,p=0,c=r[0][0]==="*"?this.rules.inline.emStrongRDelimAst:this.rules.inline.emStrongRDelimUnd;for(c.lastIndex=0,t=t.slice(-1*e.length+s);(r=c.exec(t))!=null;){if(a=r[1]||r[2]||r[3]||r[4]||r[5]||r[6],!a)continue;if(o=[...a].length,r[3]||r[4]){u+=o;continue}else if((r[5]||r[6])&&s%3&&!((s+o)%3)){p+=o;continue}if(u-=o,u>0)continue;o=Math.min(o,o+u+p);let g=[...r[0]][0].length,h=e.slice(0,s+r.index+g+o);if(Math.min(s,o)%2){let f=h.slice(1,-1);return{type:"em",raw:h,text:f,tokens:this.lexer.inlineTokens(f)}}let R=h.slice(2,-2);return{type:"strong",raw:h,text:R,tokens:this.lexer.inlineTokens(R)}}}}codespan(e){let t=this.rules.inline.code.exec(e);if(t){let n=t[2].replace(this.rules.other.newLineCharGlobal," "),r=this.rules.other.nonSpaceChar.test(n),i=this.rules.other.startingSpaceChar.test(n)&&this.rules.other.endingSpaceChar.test(n);return r&&i&&(n=n.substring(1,n.length-1)),{type:"codespan",raw:t[0],text:n}}}br(e){let t=this.rules.inline.br.exec(e);if(t)return{type:"br",raw:t[0]}}del(e){let t=this.rules.inline.del.exec(e);if(t)return{type:"del",raw:t[0],text:t[2],tokens:this.lexer.inlineTokens(t[2])}}autolink(e){let t=this.rules.inline.autolink.exec(e);if(t){let n,r;return t[2]==="@"?(n=t[1],r="mailto:"+n):(n=t[1],r=n),{type:"link",raw:t[0],text:n,href:r,tokens:[{type:"text",raw:n,text:n}]}}}url(e){let t;if(t=this.rules.inline.url.exec(e)){let n,r;if(t[2]==="@")n=t[0],r="mailto:"+n;else{let i;do i=t[0],t[0]=this.rules.inline._backpedal.exec(t[0])?.[0]??"";while(i!==t[0]);n=t[0],t[1]==="www."?r="http://"+t[0]:r=t[0]}return{type:"link",raw:t[0],text:n,href:r,tokens:[{type:"text",raw:n,text:n}]}}}inlineText(e){let t=this.rules.inline.text.exec(e);if(t){let n=this.lexer.state.inRawBlock;return{type:"text",raw:t[0],text:t[0],escaped:n}}}};var x=class l{tokens;options;state;inlineQueue;tokenizer;constructor(e){this.tokens=[],this.tokens.links=Object.create(null),this.options=e||T,this.options.tokenizer=this.options.tokenizer||new y,this.tokenizer=this.options.tokenizer,this.tokenizer.options=this.options,this.tokenizer.lexer=this,this.inlineQueue=[],this.state={inLink:!1,inRawBlock:!1,top:!0};let t={other:m,block:B.normal,inline:M.normal};this.options.pedantic?(t.block=B.pedantic,t.inline=M.pedantic):this.options.gfm&&(t.block=B.gfm,this.options.breaks?t.inline=M.breaks:t.inline=M.gfm),this.tokenizer.rules=t}static get rules(){return{block:B,inline:M}}static lex(e,t){return new l(t).lex(e)}static lexInline(e,t){return new l(t).inlineTokens(e)}lex(e){e=e.replace(m.carriageReturn,`
+[F3:39]| `),this.blockTokens(e,this.tokens);for(let t=0;t<this.inlineQueue.length;t++){let n=this.inlineQueue[t];this.inlineTokens(n.src,n.tokens)}return this.inlineQueue=[],this.tokens}blockTokens(e,t=[],n=!1){for(this.options.pedantic&&(e=e.replace(m.tabCharGlobal,"    ").replace(m.spaceLine,""));e;){let r;if(this.options.extensions?.block?.some(s=>(r=s.call({lexer:this},e,t))?(e=e.substring(r.raw.length),t.push(r),!0):!1))continue;if(r=this.tokenizer.space(e)){e=e.substring(r.raw.length);let s=t.at(-1);r.raw.length===1&&s!==void 0?s.raw+=`
+[F3:40]| `:t.push(r);continue}if(r=this.tokenizer.code(e)){e=e.substring(r.raw.length);let s=t.at(-1);s?.type==="paragraph"||s?.type==="text"?(s.raw+=(s.raw.endsWith(`
+[F3:41]| `)?"":`
+[F3:42]| `)+r.raw,s.text+=`
+[F3:43]| `+r.text,this.inlineQueue.at(-1).src=s.text):t.push(r);continue}if(r=this.tokenizer.fences(e)){e=e.substring(r.raw.length),t.push(r);continue}if(r=this.tokenizer.heading(e)){e=e.substring(r.raw.length),t.push(r);continue}if(r=this.tokenizer.hr(e)){e=e.substring(r.raw.length),t.push(r);continue}if(r=this.tokenizer.blockquote(e)){e=e.substring(r.raw.length),t.push(r);continue}if(r=this.tokenizer.list(e)){e=e.substring(r.raw.length),t.push(r);continue}if(r=this.tokenizer.html(e)){e=e.substring(r.raw.length),t.push(r);continue}if(r=this.tokenizer.def(e)){e=e.substring(r.raw.length);let s=t.at(-1);s?.type==="paragraph"||s?.type==="text"?(s.raw+=(s.raw.endsWith(`
+[F3:44]| `)?"":`
+[F3:45]| `)+r.raw,s.text+=`
+[F3:46]| `+r.raw,this.inlineQueue.at(-1).src=s.text):this.tokens.links[r.tag]||(this.tokens.links[r.tag]={href:r.href,title:r.title},t.push(r));continue}if(r=this.tokenizer.table(e)){e=e.substring(r.raw.length),t.push(r);continue}if(r=this.tokenizer.lheading(e)){e=e.substring(r.raw.length),t.push(r);continue}let i=e;if(this.options.extensions?.startBlock){let s=1/0,a=e.slice(1),o;this.options.extensions.startBlock.forEach(u=>{o=u.call({lexer:this},a),typeof o=="number"&&o>=0&&(s=Math.min(s,o))}),s<1/0&&s>=0&&(i=e.substring(0,s+1))}if(this.state.top&&(r=this.tokenizer.paragraph(i))){let s=t.at(-1);n&&s?.type==="paragraph"?(s.raw+=(s.raw.endsWith(`
+[F3:47]| `)?"":`
+[F3:48]| `)+r.raw,s.text+=`
+[F3:49]| `+r.text,this.inlineQueue.pop(),this.inlineQueue.at(-1).src=s.text):t.push(r),n=i.length!==e.length,e=e.substring(r.raw.length);continue}if(r=this.tokenizer.text(e)){e=e.substring(r.raw.length);let s=t.at(-1);s?.type==="text"?(s.raw+=(s.raw.endsWith(`
+[F3:50]| `)?"":`
+[F3:51]| `)+r.raw,s.text+=`
+[F3:52]| `+r.text,this.inlineQueue.pop(),this.inlineQueue.at(-1).src=s.text):t.push(r);continue}if(e){let s="Infinite loop on byte: "+e.charCodeAt(0);if(this.options.silent){console.error(s);break}else throw new Error(s)}}return this.state.top=!0,t}inline(e,t=[]){return this.inlineQueue.push({src:e,tokens:t}),t}inlineTokens(e,t=[]){let n=e,r=null;if(this.tokens.links){let o=Object.keys(this.tokens.links);if(o.length>0)for(;(r=this.tokenizer.rules.inline.reflinkSearch.exec(n))!=null;)o.includes(r[0].slice(r[0].lastIndexOf("[")+1,-1))&&(n=n.slice(0,r.index)+"["+"a".repeat(r[0].length-2)+"]"+n.slice(this.tokenizer.rules.inline.reflinkSearch.lastIndex))}for(;(r=this.tokenizer.rules.inline.anyPunctuation.exec(n))!=null;)n=n.slice(0,r.index)+"++"+n.slice(this.tokenizer.rules.inline.anyPunctuation.lastIndex);let i;for(;(r=this.tokenizer.rules.inline.blockSkip.exec(n))!=null;)i=r[2]?r[2].length:0,n=n.slice(0,r.index+i)+"["+"a".repeat(r[0].length-i-2)+"]"+n.slice(this.tokenizer.rules.inline.blockSkip.lastIndex);n=this.options.hooks?.emStrongMask?.call({lexer:this},n)??n;let s=!1,a="";for(;e;){s||(a=""),s=!1;let o;if(this.options.extensions?.inline?.some(p=>(o=p.call({lexer:this},e,t))?(e=e.substring(o.raw.length),t.push(o),!0):!1))continue;if(o=this.tokenizer.escape(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.tag(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.link(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.reflink(e,this.tokens.links)){e=e.substring(o.raw.length);let p=t.at(-1);o.type==="text"&&p?.type==="text"?(p.raw+=o.raw,p.text+=o.text):t.push(o);continue}if(o=this.tokenizer.emStrong(e,n,a)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.codespan(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.br(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.del(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.autolink(e)){e=e.substring(o.raw.length),t.push(o);continue}if(!this.state.inLink&&(o=this.tokenizer.url(e))){e=e.substring(o.raw.length),t.push(o);continue}let u=e;if(this.options.extensions?.startInline){let p=1/0,c=e.slice(1),g;this.options.extensions.startInline.forEach(h=>{g=h.call({lexer:this},c),typeof g=="number"&&g>=0&&(p=Math.min(p,g))}),p<1/0&&p>=0&&(u=e.substring(0,p+1))}if(o=this.tokenizer.inlineText(u)){e=e.substring(o.raw.length),o.raw.slice(-1)!=="_"&&(a=o.raw.slice(-1)),s=!0;let p=t.at(-1);p?.type==="text"?(p.raw+=o.raw,p.text+=o.text):t.push(o);continue}if(e){let p="Infinite loop on byte: "+e.charCodeAt(0);if(this.options.silent){console.error(p);break}else throw new Error(p)}}return t}};var P=class{options;parser;constructor(e){this.options=e||T}space(e){return""}code({text:e,lang:t,escaped:n}){let r=(t||"").match(m.notSpaceStart)?.[0],i=e.replace(m.endingNewline,"")+`
+[F3:53]| `;return r?'<pre><code class="language-'+w(r)+'">'+(n?i:w(i,!0))+`</code></pre>
+[F3:54]| `:"<pre><code>"+(n?i:w(i,!0))+`</code></pre>
+[F3:55]| `}blockquote({tokens:e}){return`<blockquote>
+[F3:56]| ${this.parser.parse(e)}</blockquote>
+[F3:57]| `}html({text:e}){return e}def(e){return""}heading({tokens:e,depth:t}){return`<h${t}>${this.parser.parseInline(e)}</h${t}>
+[F3:58]| `}hr(e){return`<hr>
+[F3:59]| `}list(e){let t=e.ordered,n=e.start,r="";for(let a=0;a<e.items.length;a++){let o=e.items[a];r+=this.listitem(o)}let i=t?"ol":"ul",s=t&&n!==1?' start="'+n+'"':"";return"<"+i+s+`>
+[F3:60]| `+r+"</"+i+`>
+[F3:61]| `}listitem(e){return`<li>${this.parser.parse(e.tokens)}</li>
+[F3:62]| `}checkbox({checked:e}){return"<input "+(e?'checked="" ':"")+'disabled="" type="checkbox"> '}paragraph({tokens:e}){return`<p>${this.parser.parseInline(e)}</p>
+[F3:63]| `}table(e){let t="",n="";for(let i=0;i<e.header.length;i++)n+=this.tablecell(e.header[i]);t+=this.tablerow({text:n});let r="";for(let i=0;i<e.rows.length;i++){let s=e.rows[i];n="";for(let a=0;a<s.length;a++)n+=this.tablecell(s[a]);r+=this.tablerow({text:n})}return r&&(r=`<tbody>${r}</tbody>`),`<table>
+[F3:64]| <thead>
+[F3:65]| `+t+`</thead>
+[F3:66]| `+r+`</table>
+[F3:67]| `}tablerow({text:e}){return`<tr>
+[F3:68]| ${e}</tr>
+[F3:69]| `}tablecell(e){let t=this.parser.parseInline(e.tokens),n=e.header?"th":"td";return(e.align?`<${n} align="${e.align}">`:`<${n}>`)+t+`</${n}>
+[F3:70]| `}strong({tokens:e}){return`<strong>${this.parser.parseInline(e)}</strong>`}em({tokens:e}){return`<em>${this.parser.parseInline(e)}</em>`}codespan({text:e}){return`<code>${w(e,!0)}</code>`}br(e){return"<br>"}del({tokens:e}){return`<del>${this.parser.parseInline(e)}</del>`}link({href:e,title:t,tokens:n}){let r=this.parser.parseInline(n),i=J(e);if(i===null)return r;e=i;let s='<a href="'+e+'"';return t&&(s+=' title="'+w(t)+'"'),s+=">"+r+"</a>",s}image({href:e,title:t,text:n,tokens:r}){r&&(n=this.parser.parseInline(r,this.parser.textRenderer));let i=J(e);if(i===null)return w(n);e=i;let s=`<img src="${e}" alt="${n}"`;return t&&(s+=` title="${w(t)}"`),s+=">",s}text(e){return"tokens"in e&&e.tokens?this.parser.parseInline(e.tokens):"escaped"in e&&e.escaped?e.text:w(e.text)}};var $=class{strong({text:e}){return e}em({text:e}){return e}codespan({text:e}){return e}del({text:e}){return e}html({text:e}){return e}text({text:e}){return e}link({text:e}){return""+e}image({text:e}){return""+e}br(){return""}checkbox({raw:e}){return e}};var b=class l{options;renderer;textRenderer;constructor(e){this.options=e||T,this.options.renderer=this.options.renderer||new P,this.renderer=this.options.renderer,this.renderer.options=this.options,this.renderer.parser=this,this.textRenderer=new $}static parse(e,t){return new l(t).parse(e)}static parseInline(e,t){return new l(t).parseInline(e)}parse(e){let t="";for(let n=0;n<e.length;n++){let r=e[n];if(this.options.extensions?.renderers?.[r.type]){let s=r,a=this.options.extensions.renderers[s.type].call({parser:this},s);if(a!==!1||!["space","hr","heading","code","table","blockquote","list","html","def","paragraph","text"].includes(s.type)){t+=a||"";continue}}let i=r;switch(i.type){case"space":{t+=this.renderer.space(i);break}case"hr":{t+=this.renderer.hr(i);break}case"heading":{t+=this.renderer.heading(i);break}case"code":{t+=this.renderer.code(i);break}case"table":{t+=this.renderer.table(i);break}case"blockquote":{t+=this.renderer.blockquote(i);break}case"list":{t+=this.renderer.list(i);break}case"checkbox":{t+=this.renderer.checkbox(i);break}case"html":{t+=this.renderer.html(i);break}case"def":{t+=this.renderer.def(i);break}case"paragraph":{t+=this.renderer.paragraph(i);break}case"text":{t+=this.renderer.text(i);break}default:{let s='Token with "'+i.type+'" type was not found.';if(this.options.silent)return console.error(s),"";throw new Error(s)}}}return t}parseInline(e,t=this.renderer){let n="";for(let r=0;r<e.length;r++){let i=e[r];if(this.options.extensions?.renderers?.[i.type]){let a=this.options.extensions.renderers[i.type].call({parser:this},i);if(a!==!1||!["escape","html","link","image","strong","em","codespan","br","del","text"].includes(i.type)){n+=a||"";continue}}let s=i;switch(s.type){case"escape":{n+=t.text(s);break}case"html":{n+=t.html(s);break}case"link":{n+=t.link(s);break}case"image":{n+=t.image(s);break}case"checkbox":{n+=t.checkbox(s);break}case"strong":{n+=t.strong(s);break}case"em":{n+=t.em(s);break}case"codespan":{n+=t.codespan(s);break}case"br":{n+=t.br(s);break}case"del":{n+=t.del(s);break}case"text":{n+=t.text(s);break}default:{let a='Token with "'+s.type+'" type was not found.';if(this.options.silent)return console.error(a),"";throw new Error(a)}}}return n}};var S=class{options;block;constructor(e){this.options=e||T}static passThroughHooks=new Set(["preprocess","postprocess","processAllTokens","emStrongMask"]);static passThroughHooksRespectAsync=new Set(["preprocess","postprocess","processAllTokens"]);preprocess(e){return e}postprocess(e){return e}processAllTokens(e){return e}emStrongMask(e){return e}provideLexer(){return this.block?x.lex:x.lexInline}provideParser(){return this.block?b.parse:b.parseInline}};var A=class{defaults=_();options=this.setOptions;parse=this.parseMarkdown(!0);parseInline=this.parseMarkdown(!1);Parser=b;Renderer=P;TextRenderer=$;Lexer=x;Tokenizer=y;Hooks=S;constructor(...e){this.use(...e)}walkTokens(e,t){let n=[];for(let r of e)switch(n=n.concat(t.call(this,r)),r.type){case"table":{let i=r;for(let s of i.header)n=n.concat(this.walkTokens(s.tokens,t));for(let s of i.rows)for(let a of s)n=n.concat(this.walkTokens(a.tokens,t));break}case"list":{let i=r;n=n.concat(this.walkTokens(i.items,t));break}default:{let i=r;this.defaults.extensions?.childTokens?.[i.type]?this.defaults.extensions.childTokens[i.type].forEach(s=>{let a=i[s].flat(1/0);n=n.concat(this.walkTokens(a,t))}):i.tokens&&(n=n.concat(this.walkTokens(i.tokens,t)))}}return n}use(...e){let t=this.defaults.extensions||{renderers:{},childTokens:{}};return e.forEach(n=>{let r={...n};if(r.async=this.defaults.async||r.async||!1,n.extensions&&(n.extensions.forEach(i=>{if(!i.name)throw new Error("extension name required");if("renderer"in i){let s=t.renderers[i.name];s?t.renderers[i.name]=function(...a){let o=i.renderer.apply(this,a);return o===!1&&(o=s.apply(this,a)),o}:t.renderers[i.name]=i.renderer}if("tokenizer"in i){if(!i.level||i.level!=="block"&&i.level!=="inline")throw new Error("extension level must be 'block' or 'inline'");let s=t[i.level];s?s.unshift(i.tokenizer):t[i.level]=[i.tokenizer],i.start&&(i.level==="block"?t.startBlock?t.startBlock.push(i.start):t.startBlock=[i.start]:i.level==="inline"&&(t.startInline?t.startInline.push(i.start):t.startInline=[i.start]))}"childTokens"in i&&i.childTokens&&(t.childTokens[i.name]=i.childTokens)}),r.extensions=t),n.renderer){let i=this.defaults.renderer||new P(this.defaults);for(let s in n.renderer){if(!(s in i))throw new Error(`renderer '${s}' does not exist`);if(["options","parser"].includes(s))continue;let a=s,o=n.renderer[a],u=i[a];i[a]=(...p)=>{let c=o.apply(i,p);return c===!1&&(c=u.apply(i,p)),c||""}}r.renderer=i}if(n.tokenizer){let i=this.defaults.tokenizer||new y(this.defaults);for(let s in n.tokenizer){if(!(s in i))throw new Error(`tokenizer '${s}' does not exist`);if(["options","rules","lexer"].includes(s))continue;let a=s,o=n.tokenizer[a],u=i[a];i[a]=(...p)=>{let c=o.apply(i,p);return c===!1&&(c=u.apply(i,p)),c}}r.tokenizer=i}if(n.hooks){let i=this.defaults.hooks||new S;for(let s in n.hooks){if(!(s in i))throw new Error(`hook '${s}' does not exist`);if(["options","block"].includes(s))continue;let a=s,o=n.hooks[a],u=i[a];S.passThroughHooks.has(s)?i[a]=p=>{if(this.defaults.async&&S.passThroughHooksRespectAsync.has(s))return(async()=>{let g=await o.call(i,p);return u.call(i,g)})();let c=o.call(i,p);return u.call(i,c)}:i[a]=(...p)=>{if(this.defaults.async)return(async()=>{let g=await o.apply(i,p);return g===!1&&(g=await u.apply(i,p)),g})();let c=o.apply(i,p);return c===!1&&(c=u.apply(i,p)),c}}r.hooks=i}if(n.walkTokens){let i=this.defaults.walkTokens,s=n.walkTokens;r.walkTokens=function(a){let o=[];return o.push(s.call(this,a)),i&&(o=o.concat(i.call(this,a))),o}}this.defaults={...this.defaults,...r}}),this}setOptions(e){return this.defaults={...this.defaults,...e},this}lexer(e,t){return x.lex(e,t??this.defaults)}parser(e,t){return b.parse(e,t??this.defaults)}parseMarkdown(e){return(n,r)=>{let i={...r},s={...this.defaults,...i},a=this.onError(!!s.silent,!!s.async);if(this.defaults.async===!0&&i.async===!1)return a(new Error("marked(): The async option was set to true by an extension. Remove async: false from the parse options object to return a Promise."));if(typeof n>"u"||n===null)return a(new Error("marked(): input parameter is undefined or null"));if(typeof n!="string")return a(new Error("marked(): input parameter is of type "+Object.prototype.toString.call(n)+", string expected"));if(s.hooks&&(s.hooks.options=s,s.hooks.block=e),s.async)return(async()=>{let o=s.hooks?await s.hooks.preprocess(n):n,p=await(s.hooks?await s.hooks.provideLexer():e?x.lex:x.lexInline)(o,s),c=s.hooks?await s.hooks.processAllTokens(p):p;s.walkTokens&&await Promise.all(this.walkTokens(c,s.walkTokens));let h=await(s.hooks?await s.hooks.provideParser():e?b.parse:b.parseInline)(c,s);return s.hooks?await s.hooks.postprocess(h):h})().catch(a);try{s.hooks&&(n=s.hooks.preprocess(n));let u=(s.hooks?s.hooks.provideLexer():e?x.lex:x.lexInline)(n,s);s.hooks&&(u=s.hooks.processAllTokens(u)),s.walkTokens&&this.walkTokens(u,s.walkTokens);let c=(s.hooks?s.hooks.provideParser():e?b.parse:b.parseInline)(u,s);return s.hooks&&(c=s.hooks.postprocess(c)),c}catch(o){return a(o)}}}onError(e,t){return n=>{if(n.message+=`
+[F3:71]| Please report this to https://github.com/markedjs/marked.`,e){let r="<p>An error occurred:</p><pre>"+w(n.message+"",!0)+"</pre>";return t?Promise.resolve(r):r}if(t)return Promise.reject(n);throw n}}};var L=new A;function d(l,e){return L.parse(l,e)}d.options=d.setOptions=function(l){return L.setOptions(l),d.defaults=L.defaults,G(d.defaults),d};d.getDefaults=_;d.defaults=T;d.use=function(...l){return L.use(...l),d.defaults=L.defaults,G(d.defaults),d};d.walkTokens=function(l,e){return L.walkTokens(l,e)};d.parseInline=L.parseInline;d.Parser=b;d.parser=b.parse;d.Renderer=P;d.TextRenderer=$;d.Lexer=x;d.lexer=x.lex;d.Tokenizer=y;d.Hooks=S;d.parse=d;var it=d.options,ot=d.setOptions,at=d.use,lt=d.walkTokens,ut=d.parseInline,pt=d,ct=b.parse,ht=x.lex;
+[F3:72]| 
+[F3:73]| if(__exports != exports)module.exports = exports;return module.exports}));
+[F3:74]| //# sourceMappingURL=marked.umd.js.map
 
 ================================================================================
-文件路径: README.md(F4) (约合大小: 1 KB)
+文件路径: package-lock.json(F4) (约合大小: 0 KB)
 ================================================================================
-[F4:1]| # Rail (Extension + PWA)
-[F4:2]| 
-[F4:3]| Minimalist, local-first side panel for task anchoring and execution chat.
-[F4:4]| 
-[F4:5]| ## Files
-[F4:6]| - `manifest.json`: Chrome Extension Manifest V3.
-[F4:7]| - `sidepanel.html`: UI layout (60% tasks, 40% chat).
-[F4:8]| - `styles.css`: VS Code-like dark theme.
-[F4:9]| - `script.js`: Task list, settings, and chat logic.
-[F4:10]| 
-[F4:11]| ## Quick Test (Browser)
-[F4:12]| 1. Open `sidepanel.html` directly in a browser.
-[F4:13]| 2. Paste tasks (one per line) and click **Add Tasks**.
-[F4:14]| 3. Save API settings and send a chat question.
-[F4:15]| 
-[F4:16]| ## Load in Chrome (Extension)
-[F4:17]| 1. Open `chrome://extensions/`.
-[F4:18]| 2. Enable **Developer mode**.
-[F4:19]| 3. Click **Load unpacked** and select the `github` folder.
-[F4:20]| 4. Open the side panel from the extension toolbar.
-[F4:21]| 
-[F4:22]| ## Run as PWA (Local)
-[F4:23]| 1. Start a local static server at the project root.
-[F4:24]| 2. Open the served `sidepanel.html` in a browser.
-[F4:25]| 3. Use the install icon to add it as an app (optional).
-[F4:26]| 
-[F4:27]| ## Manual Test Plan
-[F4:28]| - **Task ingestion**: Paste multi-line text → multiple tasks appear.
-[F4:29]| - **Toggle active/done**: Click tasks to mark done; active task is highlighted.
-[F4:30]| - **Persistence**: Refresh panel → tasks and settings remain.
-[F4:31]| - **API validation**: Remove API key → sending chat alerts.
-[F4:32]| - **Context injection**: Active task, totals, and pending list appear in prompt (inspect via server logs if using a proxy).
-[F4:33]| - **Providers**: Add multiple providers, switch dropdown, and verify settings change.
-[F4:34]| 
-[F4:35]| ## System Prompt Template
-[F4:36]| The system prompt lives in `system_prompt.txt`. You can edit it directly and use these placeholders:
-[F4:37]| - `{ACTIVE_TASK}`: Current active task text.
-[F4:38]| - `{TOTAL_TASKS}`: Number of tasks in the list.
-[F4:39]| - `{DONE_TASKS}`: Count of completed tasks.
-[F4:40]| - `{PENDING_TASKS}`: Bullet list of pending tasks (or "All tasks completed!").
+[F4:1]| {
+[F4:2]|   "name": "context_anchor",
+[F4:3]|   "version": "1.0.0",
+[F4:4]|   "lockfileVersion": 3,
+[F4:5]|   "requires": true,
+[F4:6]|   "packages": {
+[F4:7]|     "": {
+[F4:8]|       "name": "context_anchor",
+[F4:9]|       "version": "1.0.0",
+[F4:10]|       "license": "ISC",
+[F4:11]|       "dependencies": {
+[F4:12]|         "marked": "^17.0.1"
+[F4:13]|       }
+[F4:14]|     },
+[F4:15]|     "node_modules/marked": {
+[F4:16]|       "version": "17.0.1",
+[F4:17]|       "resolved": "https://registry.npmjs.org/marked/-/marked-17.0.1.tgz",
+[F4:18]|       "integrity": "sha512-boeBdiS0ghpWcSwoNm/jJBwdpFaMnZWRzjA6SkUMYb40SVaN1x7mmfGKp0jvexGcx+7y2La5zRZsYFZI6Qpypg==",
+[F4:19]|       "license": "MIT",
+[F4:20]|       "bin": {
+[F4:21]|         "marked": "bin/marked.js"
+[F4:22]|       },
+[F4:23]|       "engines": {
+[F4:24]|         "node": ">= 20"
+[F4:25]|       }
+[F4:26]|     }
+[F4:27]|   }
+[F4:28]| }
 
 ================================================================================
-文件路径: script.js(F5) (约合大小: 12 KB)
+文件路径: package.json(F5) (约合大小: 0 KB)
 ================================================================================
-[F5:1]| const TASKS_KEY = "rail_tasks";
-[F5:2]| const ACTIVE_TASK_KEY = "rail_active_task_id";
-[F5:3]| const PROVIDERS_KEY = "rail_providers";
-[F5:4]| const ACTIVE_PROVIDER_INDEX = "rail_current_provider_idx";
-[F5:5]| const TEMP_CHAT_KEY = "rail_temp_chat";
-[F5:6]| const DEFAULT_BASE_URL = "https://api.openai.com";
-[F5:7]| const DEFAULT_MODEL = "gpt-4o-mini";
-[F5:8]| const PROMPT_PATH = "system_prompt.txt";
-[F5:9]| const DEFAULT_SYSTEM_PROMPT_TEMPLATE = `You are Rail, a developer's Execution GPS.
-[F5:10]| 
-[F5:11]| [MACRO GOAL / PROGRESS]
-[F5:12]| Total tasks in project: {TOTAL_TASKS}
-[F5:13]| Completed: {DONE_TASKS}/{TOTAL_TASKS}
-[F5:14]| 
-[F5:15]| [NEXT STEPS IN PIPELINE]
-[F5:16]| {PENDING_TASKS}
-[F5:17]| 
-[F5:18]| [CURRENT FOCUS (CRITICAL)]
-[F5:19]| The user is currently working on: "{ACTIVE_TASK}"
-[F5:20]| 
-[F5:21]| [INSTRUCTION]
-[F5:22]| 1. Your answers MUST align with the Current Focus.
-[F5:23]| 2. Use the Macro Goal and Next Steps only as background context to ensure consistency.
-[F5:24]| 3. Be a minimalist. Give high-density, low-fluff code.`;
-[F5:25]| 
-[F5:26]| let tasks = [];
-[F5:27]| let activeTaskId = null;
-[F5:28]| let chatHistory = [];
-[F5:29]| let systemPromptTemplate = DEFAULT_SYSTEM_PROMPT_TEMPLATE;
-[F5:30]| let providers = [];
-[F5:31]| let currentProviderIdx = 0;
-[F5:32]| 
-[F5:33]| const taskInput = document.getElementById("task-input");
-[F5:34]| const addTasksButton = document.getElementById("add-tasks");
-[F5:35]| const taskList = document.getElementById("task-list");
-[F5:36]| const apiKeyInput = document.getElementById("api-key");
-[F5:37]| const baseUrlInput = document.getElementById("base-url");
-[F5:38]| const modelInput = document.getElementById("model");
-[F5:39]| const saveSettingsButton = document.getElementById("save-settings");
-[F5:40]| const providerSelect = document.getElementById("provider-select");
-[F5:41]| const addProviderButton = document.getElementById("add-provider");
-[F5:42]| const deleteProviderButton = document.getElementById("delete-provider");
-[F5:43]| const chatMessages = document.getElementById("chat-messages");
-[F5:44]| const chatStatus = document.getElementById("chat-status");
-[F5:45]| const chatInput = document.getElementById("chat-input");
-[F5:46]| const sendChatButton = document.getElementById("send-chat");
-[F5:47]| const toggleSettingsButton = document.getElementById("toggle-settings");
-[F5:48]| const settingsPanel = document.querySelector(".settings");
-[F5:49]| const clearChatButton = document.getElementById("clear-chat");
-[F5:50]| 
-[F5:51]| function loadTasks() {
-[F5:52]|   try {
-[F5:53]|     const raw = localStorage.getItem(TASKS_KEY);
-[F5:54]|     tasks = raw ? JSON.parse(raw) : [];
-[F5:55]|   } catch (error) {
-[F5:56]|     tasks = [];
-[F5:57]|   }
-[F5:58]| 
-[F5:59]|   const storedActive = localStorage.getItem(ACTIVE_TASK_KEY);
-[F5:60]|   activeTaskId = storedActive ? Number(storedActive) : null;
-[F5:61]| 
-[F5:62]|   if (!tasks.find((task) => task.id === activeTaskId)) {
-[F5:63]|     activeTaskId = null;
-[F5:64]|   }
-[F5:65]| 
-[F5:66]|   if (!activeTaskId) {
-[F5:67]|     const firstPending = tasks.find((task) => task.status === "pending");
-[F5:68]|     activeTaskId = firstPending ? firstPending.id : null;
-[F5:69]|   }
-[F5:70]| 
-[F5:71]|   const cachedChat = localStorage.getItem(TEMP_CHAT_KEY);
-[F5:72]|   if (cachedChat) {
-[F5:73]|     try {
-[F5:74]|       const parsed = JSON.parse(cachedChat);
-[F5:75]|       if (Array.isArray(parsed)) {
-[F5:76]|         chatHistory = parsed;
-[F5:77]|       }
-[F5:78]|     } catch (error) {
-[F5:79]|       chatHistory = [];
-[F5:80]|     }
-[F5:81]|   }
-[F5:82]| }
-[F5:83]| 
-[F5:84]| function saveTasks() {
-[F5:85]|   localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
-[F5:86]|   if (activeTaskId) {
-[F5:87]|     localStorage.setItem(ACTIVE_TASK_KEY, String(activeTaskId));
-[F5:88]|   } else {
-[F5:89]|     localStorage.removeItem(ACTIVE_TASK_KEY);
-[F5:90]|   }
-[F5:91]| }
-[F5:92]| 
-[F5:93]| function renderTasks() {
-[F5:94]|   taskList.innerHTML = "";
-[F5:95]| 
-[F5:96]|   if (tasks.length === 0) {
-[F5:97]|     const empty = document.createElement("div");
-[F5:98]|     empty.className = "task-status";
-[F5:99]|     empty.textContent = "No tasks yet. Paste a list to begin.";
-[F5:100]|     taskList.appendChild(empty);
-[F5:101]|     return;
-[F5:102]|   }
-[F5:103]| 
-[F5:104]|   tasks.forEach((task) => {
-[F5:105]|     const item = document.createElement("div");
-[F5:106]|     item.className = "task-item";
-[F5:107]|     if (task.status === "done") {
-[F5:108]|       item.classList.add("done");
-[F5:109]|     }
-[F5:110]|     if (task.id === activeTaskId) {
-[F5:111]|       item.classList.add("active");
-[F5:112]|     }
-[F5:113]|     item.dataset.id = String(task.id);
-[F5:114]| 
-[F5:115]|     const text = document.createElement("span");
-[F5:116]|     text.textContent = task.text;
-[F5:117]| 
-[F5:118]|     const status = document.createElement("span");
-[F5:119]|     status.className = "task-status";
-[F5:120]|     status.textContent = task.status === "done" ? "Done" : "Active";
-[F5:121]| 
-[F5:122]|     item.appendChild(text);
-[F5:123]|     item.appendChild(status);
-[F5:124]| 
-[F5:125]|     item.addEventListener("click", () => toggleTask(task.id));
-[F5:126]|     taskList.appendChild(item);
-[F5:127]|   });
-[F5:128]| }
-[F5:129]| 
-[F5:130]| function toggleTask(taskId) {
-[F5:131]|   const task = tasks.find((item) => item.id === taskId);
-[F5:132]|   if (!task) {
-[F5:133]|     return;
-[F5:134]|   }
-[F5:135]| 
-[F5:136]|   const switchingTask = activeTaskId && taskId !== activeTaskId;
-[F5:137]|   if (switchingTask) {
-[F5:138]|     clearChatContext();
-[F5:139]|   }
-[F5:140]| 
-[F5:141]|   if (taskId !== activeTaskId) {
-[F5:142]|     activeTaskId = task.id;
-[F5:143]|     if (task.status === "done") {
-[F5:144]|       task.status = "pending";
-[F5:145]|     }
-[F5:146]|   } else {
-[F5:147]|     task.status = task.status === "done" ? "pending" : "done";
-[F5:148]|     if (task.status === "done") {
-[F5:149]|       const nextPending = tasks.find((item) => item.status === "pending");
-[F5:150]|       activeTaskId = nextPending ? nextPending.id : null;
-[F5:151]|     }
-[F5:152]|   }
-[F5:153]| 
-[F5:154]|   saveTasks();
-[F5:155]|   renderTasks();
-[F5:156]| }
-[F5:157]| 
-[F5:158]| function ingestTasks() {
-[F5:159]|   const rawText = taskInput.value.trim();
-[F5:160]|   if (!rawText) {
-[F5:161]|     return;
-[F5:162]|   }
-[F5:163]| 
-[F5:164]|   // MVP rule: split raw text by newline into tasks.
-[F5:165]|   const lines = rawText.split(/\r?\n/).map((line) => line.trim());
-[F5:166]|   const newTasks = lines
-[F5:167]|     .filter(Boolean)
-[F5:168]|     .map((text, index) => {
-[F5:169]|       const cleanedText = text.replace(
-[F5:170]|         /^([-*+]|\d+\.)\s+(\[[\s_xX]\]\s+)?/i,
-[F5:171]|         ""
-[F5:172]|       );
-[F5:173]|       return {
-[F5:174]|         id: Date.now() + index,
-[F5:175]|         text: cleanedText,
-[F5:176]|         status: "pending",
-[F5:177]|         context_payload: {},
-[F5:178]|       };
-[F5:179]|     });
-[F5:180]| 
-[F5:181]|   tasks = [...tasks, ...newTasks];
-[F5:182]|   taskInput.value = "";
-[F5:183]| 
-[F5:184]|   if (!activeTaskId && newTasks.length > 0) {
-[F5:185]|     activeTaskId = newTasks[0].id;
-[F5:186]|   }
-[F5:187]| 
-[F5:188]|   saveTasks();
-[F5:189]|   renderTasks();
-[F5:190]| }
-[F5:191]| 
-[F5:192]| function loadSettings() {
-[F5:193]|   const raw = localStorage.getItem(PROVIDERS_KEY);
-[F5:194]|   providers = raw
-[F5:195]|     ? JSON.parse(raw)
-[F5:196]|     : [
-[F5:197]|         {
-[F5:198]|           name: "Default",
-[F5:199]|           key: "",
-[F5:200]|           url: DEFAULT_BASE_URL,
-[F5:201]|           model: DEFAULT_MODEL,
-[F5:202]|         },
-[F5:203]|       ];
-[F5:204]|   currentProviderIdx = Number(localStorage.getItem(ACTIVE_PROVIDER_INDEX)) || 0;
-[F5:205]|   if (currentProviderIdx >= providers.length) {
-[F5:206]|     currentProviderIdx = 0;
-[F5:207]|   }
-[F5:208]|   renderProviderOptions();
-[F5:209]|   fillSettingsFields();
-[F5:210]| }
-[F5:211]| 
-[F5:212]| function saveSettings() {
-[F5:213]|   const provider = providers[currentProviderIdx];
-[F5:214]|   provider.key = apiKeyInput.value.trim();
-[F5:215]|   provider.url = baseUrlInput.value.trim();
-[F5:216]|   provider.model = modelInput.value.trim();
-[F5:217]|   localStorage.setItem(PROVIDERS_KEY, JSON.stringify(providers));
-[F5:218]|   localStorage.setItem(ACTIVE_PROVIDER_INDEX, String(currentProviderIdx));
-[F5:219]|   renderProviderOptions();
-[F5:220]| }
-[F5:221]| 
-[F5:222]| function renderProviderOptions() {
-[F5:223]|   providerSelect.innerHTML = providers
-[F5:224]|     .map((provider, index) => {
-[F5:225]|       const selected = index === currentProviderIdx ? "selected" : "";
-[F5:226]|       const name = provider.name?.trim() || `Config ${index + 1}`;
-[F5:227]|       return `<option value="${index}" ${selected}>${name}</option>`;
-[F5:228]|     })
-[F5:229]|     .join("");
-[F5:230]| }
-[F5:231]| 
-[F5:232]| function fillSettingsFields() {
-[F5:233]|   const provider = providers[currentProviderIdx];
-[F5:234]|   apiKeyInput.value = provider?.key || "";
-[F5:235]|   baseUrlInput.value = provider?.url || DEFAULT_BASE_URL;
-[F5:236]|   modelInput.value = provider?.model || DEFAULT_MODEL;
-[F5:237]| }
-[F5:238]| 
-[F5:239]| function addProvider() {
-[F5:240]|   const name = prompt("Provider Name:", "New Config");
-[F5:241]|   if (!name) {
-[F5:242]|     return;
-[F5:243]|   }
-[F5:244]|   providers.push({
-[F5:245]|     name,
-[F5:246]|     key: "",
-[F5:247]|     url: DEFAULT_BASE_URL,
-[F5:248]|     model: DEFAULT_MODEL,
-[F5:249]|   });
-[F5:250]|   currentProviderIdx = providers.length - 1;
-[F5:251]|   saveSettings();
-[F5:252]|   fillSettingsFields();
-[F5:253]| }
-[F5:254]| 
-[F5:255]| function deleteProvider() {
-[F5:256]|   if (providers.length <= 1) {
-[F5:257]|     alert("At least one provider is required.");
-[F5:258]|     return;
-[F5:259]|   }
-[F5:260]|   providers.splice(currentProviderIdx, 1);
-[F5:261]|   currentProviderIdx = Math.max(0, currentProviderIdx - 1);
-[F5:262]|   saveSettings();
-[F5:263]|   fillSettingsFields();
-[F5:264]| }
-[F5:265]| 
-[F5:266]| function appendMessage(role, content) {
-[F5:267]|   const bubble = document.createElement("div");
-[F5:268]|   bubble.className = `chat-bubble ${role}`;
-[F5:269]|   bubble.textContent = content;
-[F5:270]|   chatMessages.appendChild(bubble);
-[F5:271]|   chatMessages.scrollTop = chatMessages.scrollHeight;
-[F5:272]|   persistChatHistory();
-[F5:273]| }
-[F5:274]| 
-[F5:275]| async function loadSystemPrompt() {
-[F5:276]|   try {
-[F5:277]|     const promptUrl =
-[F5:278]|       typeof chrome !== "undefined" && chrome.runtime?.getURL
-[F5:279]|         ? chrome.runtime.getURL(PROMPT_PATH)
-[F5:280]|         : PROMPT_PATH;
-[F5:281]|     const response = await fetch(promptUrl);
-[F5:282]|     if (!response.ok) {
-[F5:283]|       return;
-[F5:284]|     }
-[F5:285]|     const text = await response.text();
-[F5:286]|     if (text && text.trim()) {
-[F5:287]|       systemPromptTemplate = text.trim();
-[F5:288]|     }
-[F5:289]|   } catch (error) {
-[F5:290]|     systemPromptTemplate = DEFAULT_SYSTEM_PROMPT_TEMPLATE;
-[F5:291]|   }
-[F5:292]| }
-[F5:293]| 
-[F5:294]| function buildSystemPrompt(activeTaskText) {
-[F5:295]|   const template = systemPromptTemplate || DEFAULT_SYSTEM_PROMPT_TEMPLATE;
-[F5:296]|   const totalTasks = tasks.length;
-[F5:297]|   const doneTasks = tasks.filter((task) => task.status === "done").length;
-[F5:298]|   const pendingTasks = tasks
-[F5:299]|     .filter((task) => task.status === "pending")
-[F5:300]|     .map((task) => `- ${task.text}`)
-[F5:301]|     .join("\n");
-[F5:302]|   const pendingText = pendingTasks || "All tasks completed!";
-[F5:303]| 
-[F5:304]|   return template
-[F5:305]|     .replaceAll("{TOTAL_TASKS}", String(totalTasks))
-[F5:306]|     .replaceAll("{DONE_TASKS}", String(doneTasks))
-[F5:307]|     .replaceAll("{PENDING_TASKS}", pendingText)
-[F5:308]|     .replaceAll("{ACTIVE_TASK}", activeTaskText);
-[F5:309]| }
-[F5:310]| 
-[F5:311]| function persistChatHistory() {
-[F5:312]|   localStorage.setItem(TEMP_CHAT_KEY, JSON.stringify(chatHistory));
-[F5:313]| }
-[F5:314]| 
-[F5:315]| function clearChatContext() {
-[F5:316]|   chatHistory = [];
-[F5:317]|   chatMessages.innerHTML = "";
-[F5:318]|   localStorage.removeItem(TEMP_CHAT_KEY);
-[F5:319]|   appendMessage("system", "Context switched. Memory cleared.");
-[F5:320]| }
-[F5:321]| 
-[F5:322]| function clearChatHistory() {
-[F5:323]|   chatHistory = [];
-[F5:324]|   chatMessages.innerHTML = "";
-[F5:325]|   localStorage.removeItem(TEMP_CHAT_KEY);
-[F5:326]|   appendMessage("system", "Chat cleared.");
-[F5:327]| }
-[F5:328]| 
-[F5:329]| function restoreChatHistory() {
-[F5:330]|   if (chatHistory.length === 0) {
-[F5:331]|     return;
-[F5:332]|   }
-[F5:333]| 
-[F5:334]|   chatMessages.innerHTML = "";
-[F5:335]|   chatHistory.forEach((message) => {
-[F5:336]|     if (!message?.role || !message?.content) {
-[F5:337]|       return;
-[F5:338]|     }
-[F5:339]|     appendMessage(message.role, message.content);
-[F5:340]|   });
-[F5:341]| }
-[F5:342]| 
-[F5:343]| async function sendChat() {
-[F5:344]|   const question = chatInput.value.trim();
-[F5:345]|   if (!question) {
-[F5:346]|     return;
-[F5:347]|   }
-[F5:348]| 
-[F5:349]|   const apiKey = apiKeyInput.value.trim();
-[F5:350]|   if (!apiKey) {
-[F5:351]|     alert("Missing API Key. Please save your key first.");
-[F5:352]|     return;
-[F5:353]|   }
-[F5:354]| 
-[F5:355]|   const baseUrl = baseUrlInput.value.trim() || DEFAULT_BASE_URL;
-[F5:356]|   const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
-[F5:357]|   const endpointUrl = `${normalizedBaseUrl}/chat/completions`;
-[F5:358]|   const model = modelInput.value.trim() || DEFAULT_MODEL;
-[F5:359]|   const activeTask = tasks.find((task) => task.id === activeTaskId);
-[F5:360]|   const activeTaskText = activeTask ? activeTask.text : "None";
-[F5:361]| 
-[F5:362]|   chatInput.value = "";
-[F5:363]|   appendMessage("user", question);
-[F5:364]|   chatStatus.textContent = "Thinking...";
-[F5:365]| 
-[F5:366]|   // Inject active task context into the system prompt.
-[F5:367]|   const systemPrompt = buildSystemPrompt(activeTaskText);
-[F5:368]| 
-[F5:369]|   chatHistory.push({ role: "user", content: question });
-[F5:370]| 
-[F5:371]|   try {
-[F5:372]|     const response = await fetch(endpointUrl, {
-[F5:373]|       method: "POST",
-[F5:374]|       headers: {
-[F5:375]|         "Content-Type": "application/json",
-[F5:376]|         Authorization: `Bearer ${apiKey}`,
-[F5:377]|       },
-[F5:378]|       body: JSON.stringify({
-[F5:379]|         model,
-[F5:380]|         messages: [{ role: "system", content: systemPrompt }, ...chatHistory],
-[F5:381]|       }),
-[F5:382]|     });
-[F5:383]| 
-[F5:384]|     if (!response.ok) {
-[F5:385]|       const errorText = await response.text();
-[F5:386]|       throw new Error(errorText || "API request failed.");
-[F5:387]|     }
-[F5:388]| 
-[F5:389]|     const data = await response.json();
-[F5:390]|     const reply =
-[F5:391]|       data.choices?.[0]?.message?.content || "No response from assistant.";
-[F5:392]|     chatHistory.push({ role: "assistant", content: reply });
-[F5:393]|     appendMessage("assistant", reply);
-[F5:394]|   } catch (error) {
-[F5:395]|     appendMessage("assistant", `Error: ${error.message}`);
-[F5:396]|   } finally {
-[F5:397]|     chatStatus.textContent = "";
-[F5:398]|   }
-[F5:399]| }
-[F5:400]| 
-[F5:401]| addTasksButton.addEventListener("click", ingestTasks);
-[F5:402]| saveSettingsButton.addEventListener("click", saveSettings);
-[F5:403]| sendChatButton.addEventListener("click", sendChat);
-[F5:404]| toggleSettingsButton.addEventListener("click", () => {
-[F5:405]|   settingsPanel.classList.toggle("visible");
-[F5:406]| });
-[F5:407]| clearChatButton.addEventListener("click", clearChatHistory);
-[F5:408]| providerSelect.addEventListener("change", (event) => {
-[F5:409]|   currentProviderIdx = Number(event.target.value);
-[F5:410]|   fillSettingsFields();
-[F5:411]|   localStorage.setItem(ACTIVE_PROVIDER_INDEX, String(currentProviderIdx));
-[F5:412]| });
-[F5:413]| addProviderButton.addEventListener("click", addProvider);
-[F5:414]| deleteProviderButton.addEventListener("click", deleteProvider);
-[F5:415]| chatInput.addEventListener("keydown", (event) => {
-[F5:416]|   if (event.key === "Enter") {
-[F5:417]|     sendChat();
-[F5:418]|   }
-[F5:419]| });
-[F5:420]| 
-[F5:421]| document.addEventListener("DOMContentLoaded", () => {
-[F5:422]|   loadTasks();
-[F5:423]|   loadSettings();
-[F5:424]|   renderTasks();
-[F5:425]|   restoreChatHistory();
-[F5:426]|   loadSystemPrompt();
-[F5:427]|   if ("serviceWorker" in navigator && window.location.protocol !== "chrome-extension:") {
-[F5:428]|     navigator.serviceWorker.register("./service-worker.js").catch(() => {});
-[F5:429]|   }
-[F5:430]| });
+[F5:1]| {
+[F5:2]|   "name": "context_anchor",
+[F5:3]|   "version": "1.0.0",
+[F5:4]|   "description": "Minimalist, local-first side panel for task anchoring and execution chat.",
+[F5:5]|   "main": "script.js",
+[F5:6]|   "scripts": {
+[F5:7]|     "test": "echo \"Error: no test specified\" && exit 1"
+[F5:8]|   },
+[F5:9]|   "repository": {
+[F5:10]|     "type": "git",
+[F5:11]|     "url": "git+https://github.com/lelelelelelelelelelelelele/context_anchor.git"
+[F5:12]|   },
+[F5:13]|   "keywords": [],
+[F5:14]|   "author": "",
+[F5:15]|   "license": "ISC",
+[F5:16]|   "bugs": {
+[F5:17]|     "url": "https://github.com/lelelelelelelelelelelelele/context_anchor/issues"
+[F5:18]|   },
+[F5:19]|   "homepage": "https://github.com/lelelelelelelelelelelelele/context_anchor#readme",
+[F5:20]|   "dependencies": {
+[F5:21]|     "marked": "^17.0.1"
+[F5:22]|   }
+[F5:23]| }
 
 ================================================================================
-文件路径: service-worker.js(F6) (约合大小: 1 KB)
+文件路径: plan.md(F6) (约合大小: 0 KB)
 ================================================================================
-[F6:1]| const CACHE_NAME = "rail-pwa-v1";
-[F6:2]| const ASSETS = [
-[F6:3]|   "./",
-[F6:4]|   "./sidepanel.html",
-[F6:5]|   "./styles.css",
-[F6:6]|   "./script.js",
-[F6:7]|   "./system_prompt.txt",
-[F6:8]|   "./manifest.webmanifest",
-[F6:9]| ];
-[F6:10]| 
-[F6:11]| self.addEventListener("install", (event) => {
-[F6:12]|   event.waitUntil(
-[F6:13]|     caches
-[F6:14]|       .open(CACHE_NAME)
-[F6:15]|       .then((cache) => cache.addAll(ASSETS))
-[F6:16]|       .then(() => self.skipWaiting())
-[F6:17]|   );
-[F6:18]| });
-[F6:19]| 
-[F6:20]| self.addEventListener("activate", (event) => {
-[F6:21]|   event.waitUntil(
-[F6:22]|     caches
-[F6:23]|       .keys()
-[F6:24]|       .then((keys) =>
-[F6:25]|         Promise.all(
-[F6:26]|           keys
-[F6:27]|             .filter((key) => key !== CACHE_NAME)
-[F6:28]|             .map((key) => caches.delete(key))
-[F6:29]|         )
-[F6:30]|       )
-[F6:31]|       .then(() => self.clients.claim())
-[F6:32]|   );
-[F6:33]| });
-[F6:34]| 
-[F6:35]| self.addEventListener("fetch", (event) => {
-[F6:36]|   if (event.request.method !== "GET") {
-[F6:37]|     return;
-[F6:38]|   }
-[F6:39]| 
-[F6:40]|   event.respondWith(
-[F6:41]|     caches.match(event.request).then((cached) => {
-[F6:42]|       if (cached) {
-[F6:43]|         return cached;
-[F6:44]|       }
-[F6:45]|       return fetch(event.request).then((response) => {
-[F6:46]|         if (!response || response.status !== 200 || response.type !== "basic") {
-[F6:47]|           return response;
-[F6:48]|         }
-[F6:49]|         const responseClone = response.clone();
-[F6:50]|         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
-[F6:51]|         return response;
-[F6:52]|       });
-[F6:53]|     })
-[F6:54]|   );
-[F6:55]| });
+[F6:1]| # do in the future(not now)
+[F6:2]| *   **流式传输 (Streaming) 缺失**:
+[F6:3]|     *   在 `sendChat` `[F5:470]` 中使用了 `await fetch` 等待完整返回。对于较长的 AI 回复，界面会卡在 "Thinking..." 状态较久。
+[F6:4]|     *   **建议**: 未来可以引入 `ReadableStream` 来实现打字机效果。
+[F6:5]| 
+[F6:6]| 1.  **UI 反馈增强**:
+[F6:7]|     在 `[F8:113-116]` 的 `.task-item.active` 样式中，可以增加一个微弱的脉动动画（Pulse），视觉上强调这是当前的 "Execution GPS" 焦点。
+[F6:8]| 2.  **快捷键绑定**:
+[F6:9]|     在 `[F5:514]` 的 `keydown` 监听中，建议增加 `Ctrl+Enter` 发送消息，并增加一个快捷键用于快速勾选当前任务为 Done。
 
 ================================================================================
-文件路径: sidepanel.html(F7) (约合大小: 2 KB)
+文件路径: README.md(F7) (约合大小: 3 KB)
 ================================================================================
-[F7:1]| <!doctype html>
-[F7:2]| <html lang="en">
-[F7:3]|   <head>
-[F7:4]|     <meta charset="UTF-8" />
-[F7:5]|     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-[F7:6]|     <title>Rail</title>
-[F7:7]|     <link rel="manifest" href="manifest.webmanifest" />
-[F7:8]|     <meta name="theme-color" content="#1e1e1e" />
-[F7:9]|     <link rel="stylesheet" href="styles.css" />
-[F7:10]|   </head>
-[F7:11]|   <body>
-[F7:12]|     <div class="app">
-[F7:13]|       <section class="tasks">
-[F7:14]|         <header class="panel-header">
-[F7:15]|           <h1>Rail</h1>
-[F7:16]|           <p>Context Anchor · Execution GPS</p>
-[F7:17]|         </header>
-[F7:18]|         <div class="ingest">
-[F7:19]|           <textarea id="task-input" placeholder="Paste tasks, one per line..."></textarea>
-[F7:20]|           <button id="add-tasks">Add Tasks</button>
-[F7:21]|         </div>
-[F7:22]|         <div id="task-list" class="task-list" aria-live="polite"></div>
-[F7:23]|       </section>
-[F7:24]|       <section class="chat">
-[F7:25]|         <div class="chat-toolbar">
-[F7:26]|           <button id="clear-chat" class="clear-chat" aria-label="Clear chat">Clear</button>
-[F7:27]|           <button id="toggle-settings" class="settings-toggle" aria-label="Toggle settings">
-[F7:28]|             <span class="settings-icon" aria-hidden="true">&#9881;</span>
-[F7:29]|           </button>
-[F7:30]|         </div>
-[F7:31]|         <div class="settings">
-[F7:32]|           <div class="provider-manager">
-[F7:33]|             <select id="provider-select" aria-label="Provider"></select>
-[F7:34]|             <button id="add-provider" class="provider-action" title="New Provider">+</button>
-[F7:35]|             <button id="delete-provider" class="provider-action" title="Delete Provider">×</button>
-[F7:36]|           </div>
-[F7:37]|           <label>
-[F7:38]|             API Key
-[F7:39]|             <input id="api-key" type="password" placeholder="sk-..." />
-[F7:40]|           </label>
-[F7:41]|           <label>
-[F7:42]|             Base URL
-[F7:43]|             <input id="base-url" type="text" placeholder="https://api.openai.com" />
-[F7:44]|           </label>
-[F7:45]|           <label>
-[F7:46]|             Model
-[F7:47]|             <input id="model" type="text" placeholder="gpt-4o-mini" />
-[F7:48]|           </label>
-[F7:49]|           <button id="save-settings">Save Provider</button>
-[F7:50]|         </div>
-[F7:51]|         <div id="chat-messages" class="chat-messages"></div>
-[F7:52]|         <div id="chat-status" class="chat-status"></div>
-[F7:53]|         <div class="chat-input">
-[F7:54]|           <input id="chat-input" type="text" placeholder="Ask about the active task..." />
-[F7:55]|           <button id="send-chat">Send</button>
-[F7:56]|         </div>
-[F7:57]|       </section>
-[F7:58]|     </div>
-[F7:59]|     <script src="script.js"></script>
-[F7:60]|   </body>
-[F7:61]| </html>
+[F7:1]| # Rail (Extension + PWA)
+[F7:2]| 
+[F7:3]| Minimalist, local-first side panel for task anchoring and execution chat.
+[F7:4]| 
+[F7:5]| ## Files
+[F7:6]| - `manifest.json`: Chrome Extension Manifest V3.
+[F7:7]| - `sidepanel.html`: UI layout (60% tasks, 40% chat).
+[F7:8]| - `styles.css`: VS Code-like dark theme.
+[F7:9]| - `script.js`: Task list, settings, and chat logic.
+[F7:10]| 
+[F7:11]| ## Quick Test (Browser)
+[F7:12]| 1. Open `sidepanel.html` directly in a browser.
+[F7:13]| 2. Paste steps using the Markdown format below and click **Add Tasks**.
+[F7:14]| 3. Save API settings and send a chat question.
+[F7:15]| 
+[F7:16]| ## Task Format (Markdown)
+[F7:17]| Rail ingests tasks from Markdown headings.
+[F7:18]| 
+[F7:19]| - `### Step title` defines a step (becomes a task).
+[F7:20]| - Indented continuation lines under a step become step details (stored in `context_payload.details`).
+[F7:21]| - `#` (document title) and `##` (group title) are reserved for future expansion.
+[F7:22]| 
+[F7:23]| Example:
+[F7:24]| 
+[F7:25]| ```md
+[F7:26]| # Project Title (optional)
+[F7:27]| ## Phase A (optional)
+[F7:28]| 
+[F7:29]| ### Implement parser
+[F7:30]| 	Accept only ### headings as steps.
+[F7:31]| 	Indented lines become details.
+[F7:32]| 
+[F7:33]| ### Update docs
+[F7:34]| 	Document the format in README.
+[F7:35]| ```
+[F7:36]| 
+[F7:37]| Notes:
+[F7:38]| - Lines that are not `###` steps (and not indented details under a step) are ignored.
+[F7:39]| - The previous "one line = one task" format is intentionally not supported.
+[F7:40]| 
+[F7:41]| ## Load in Chrome (Extension)
+[F7:42]| 1. Open `chrome://extensions/`.
+[F7:43]| 2. Enable **Developer mode**.
+[F7:44]| 3. Click **Load unpacked** and select the `github` folder.
+[F7:45]| 4. Open the side panel from the extension toolbar.
+[F7:46]| 
+[F7:47]| ## Run as PWA (Local)
+[F7:48]| 1. Start a local static server at the project root.
+[F7:49]| 2. Open the served `sidepanel.html` in a browser.
+[F7:50]| 3. Use the install icon to add it as an app (optional).
+[F7:51]| 
+[F7:52]| ## Markdown Rendering (marked.js)
+[F7:53]| Rail uses a local `marked.min.js` (no CDN) to render task details + chat bubbles as Markdown.
+[F7:54]| 
+[F7:55]| Setup (one-time):
+[F7:56]| 1. Install the dependency:
+[F7:57]| 	- `npm i marked`
+[F7:58]| 2. Copy the browser (UMD) build into the project root:
+[F7:59]| 	- `copy node_modules\marked\lib\marked.umd.js marked.min.js`
+[F7:60]| 
+[F7:61]| Notes:
+[F7:62]| - The filename must be exactly `marked.min.js` (it is referenced by `sidepanel.html`).
+[F7:63]| - Service Worker caching only works when served over `http://` / `https://` (not `file://`).
+[F7:64]| 
+[F7:65]| ## Manual Test Plan
+[F7:66]| - **Task ingestion**: Paste multi-line text → multiple tasks appear.
+[F7:67]| - **Toggle active/done**: Click tasks to mark done; active task is highlighted.
+[F7:68]| - **Progress indicator**: Verify bottom status shows `done/total 完成` and updates on toggle.
+[F7:69]| - **Persistence**: Refresh panel → tasks and settings remain.
+[F7:70]| - **API validation**: Remove API key → sending chat alerts.
+[F7:71]| - **Context injection**: Active task, totals, and pending list appear in prompt (inspect via server logs if using a proxy).
+[F7:72]| - **Providers**: Add multiple providers, switch dropdown, and verify settings change.
+[F7:73]| 
+[F7:74]| ## System Prompt Template
+[F7:75]| The system prompt lives in `system_prompt.txt`. You can edit it directly and use these placeholders:
+[F7:76]| - `{ACTIVE_TASK}`: Current active task text.
+[F7:77]| - `{TASK_DETAILS}`: Markdown details for the active task (or "(no details)").
+[F7:78]| - `{TOTAL_TASKS}`: Number of tasks in the list.
+[F7:79]| - `{DONE_TASKS}`: Count of completed tasks.
+[F7:80]| - `{PENDING_TASKS}`: Bullet list of pending tasks (or "All tasks completed!").
 
 ================================================================================
-文件路径: styles.css(F8) (约合大小: 4 KB)
+文件路径: script.js(F8) (约合大小: 26 KB)
 ================================================================================
-[F8:1]| :root {
-[F8:2]|   color-scheme: dark;
-[F8:3]|   --bg: #1e1e1e;
-[F8:4]|   --panel: #252526;
-[F8:5]|   --border: #333333;
-[F8:6]|   --text: #e5e7eb;
-[F8:7]|   --muted: #9ca3af;
-[F8:8]|   --accent: #3b82f6;
-[F8:9]|   --accent-soft: rgba(59, 130, 246, 0.15);
-[F8:10]|   --done: #10b981;
-[F8:11]| }
-[F8:12]| 
-[F8:13]| * {
-[F8:14]|   box-sizing: border-box;
-[F8:15]| }
-[F8:16]| 
-[F8:17]| body {
-[F8:18]|   margin: 0;
-[F8:19]|   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-[F8:20]|   background: var(--bg);
-[F8:21]|   color: var(--text);
-[F8:22]|   height: 100vh;
-[F8:23]| }
-[F8:24]| 
-[F8:25]| .app {
-[F8:26]|   display: flex;
-[F8:27]|   flex-direction: column;
-[F8:28]|   height: 100vh;
-[F8:29]| }
-[F8:30]| 
-[F8:31]| .tasks {
-[F8:32]|   flex: 6;
-[F8:33]|   display: flex;
-[F8:34]|   flex-direction: column;
-[F8:35]|   gap: 12px;
-[F8:36]|   padding: 16px;
-[F8:37]|   border-bottom: 1px solid var(--border);
-[F8:38]|   overflow: hidden;
-[F8:39]| }
-[F8:40]| 
-[F8:41]| .panel-header h1 {
-[F8:42]|   margin: 0;
-[F8:43]|   font-size: 20px;
-[F8:44]| }
-[F8:45]| 
-[F8:46]| .panel-header p {
-[F8:47]|   margin: 4px 0 0;
-[F8:48]|   color: var(--muted);
-[F8:49]|   font-size: 12px;
-[F8:50]| }
-[F8:51]| 
-[F8:52]| .ingest {
-[F8:53]|   display: flex;
-[F8:54]|   gap: 8px;
-[F8:55]| }
-[F8:56]| 
-[F8:57]| #task-input {
-[F8:58]|   flex: 1;
-[F8:59]|   min-height: 68px;
-[F8:60]|   background: var(--panel);
-[F8:61]|   border: 1px solid var(--border);
-[F8:62]|   color: var(--text);
-[F8:63]|   padding: 8px;
-[F8:64]|   border-radius: 8px;
-[F8:65]|   resize: vertical;
-[F8:66]| }
-[F8:67]| 
-[F8:68]| button {
-[F8:69]|   background: var(--accent);
-[F8:70]|   border: none;
-[F8:71]|   color: white;
-[F8:72]|   padding: 8px 12px;
-[F8:73]|   border-radius: 8px;
-[F8:74]|   cursor: pointer;
-[F8:75]|   font-weight: 600;
-[F8:76]| }
-[F8:77]| 
-[F8:78]| button:hover {
-[F8:79]|   background: #2563eb;
-[F8:80]| }
-[F8:81]| 
-[F8:82]| .task-list {
-[F8:83]|   flex: 1;
-[F8:84]|   overflow-y: auto;
-[F8:85]|   display: flex;
-[F8:86]|   flex-direction: column;
-[F8:87]|   gap: 8px;
-[F8:88]|   padding-right: 4px;
-[F8:89]| }
-[F8:90]| 
-[F8:91]| .task-item {
-[F8:92]|   border: 1px solid var(--border);
-[F8:93]|   background: var(--panel);
-[F8:94]|   padding: 10px 12px;
-[F8:95]|   border-radius: 10px;
-[F8:96]|   display: flex;
-[F8:97]|   justify-content: space-between;
-[F8:98]|   align-items: center;
-[F8:99]|   cursor: pointer;
-[F8:100]| }
-[F8:101]| 
-[F8:102]| .task-item.active {
-[F8:103]|   border-color: var(--accent);
-[F8:104]|   background: var(--accent-soft);
-[F8:105]| }
+[F8:1]| const TASKS_KEY = "rail_tasks";
+[F8:2]| const ACTIVE_TASK_KEY = "rail_active_task_id";
+[F8:3]| const PROVIDERS_KEY = "rail_providers";
+[F8:4]| const ACTIVE_PROVIDER_INDEX = "rail_current_provider_idx";
+[F8:5]| const LAYOUT_MODE_KEY = "rail_layout_mode";
+[F8:6]| const TEMP_CHAT_KEY = "rail_temp_chat";
+[F8:7]| const DEFAULT_BASE_URL = "https://api.openai.com";
+[F8:8]| const DEFAULT_MODEL = "gpt-4o-mini";
+[F8:9]| const PROMPT_PATH = "system_prompt.txt";
+[F8:10]| const DEFAULT_SYSTEM_PROMPT_TEMPLATE = `You are Rail, a developer's Execution GPS.
+[F8:11]| 
+[F8:12]| [MACRO GOAL / PROGRESS]
+[F8:13]| Total tasks in project: {TOTAL_TASKS}
+[F8:14]| Completed: {DONE_TASKS}/{TOTAL_TASKS}
+[F8:15]| 
+[F8:16]| [NEXT STEPS IN PIPELINE]
+[F8:17]| {PENDING_TASKS}
+[F8:18]| 
+[F8:19]| [CURRENT FOCUS (CRITICAL)]
+[F8:20]| The user is currently working on: "{ACTIVE_TASK}"
+[F8:21]| Task details (Markdown):
+[F8:22]| {TASK_DETAILS}
+[F8:23]| 
+[F8:24]| [INSTRUCTION]
+[F8:25]| 1. Your answers MUST align with the Current Focus.
+[F8:26]| 2. Use the Macro Goal and Next Steps only as background context to ensure consistency.
+[F8:27]| 3. Be a minimalist. Give high-density, low-fluff code.`;
+[F8:28]| 
+[F8:29]| let tasks = [];
+[F8:30]| let activeTaskId = null;
+[F8:31]| let chatHistory = [];
+[F8:32]| let systemPromptTemplate = DEFAULT_SYSTEM_PROMPT_TEMPLATE;
+[F8:33]| let providers = [];
+[F8:34]| let currentProviderIdx = 0;
+[F8:35]| let layoutMode = "split";
+[F8:36]| let chatCollapsed = true;
+[F8:37]| 
+[F8:38]| const taskInput = document.getElementById("task-input");
+[F8:39]| const addTasksButton = document.getElementById("add-tasks");
+[F8:40]| const overviewTasksButton = document.getElementById("overview-tasks");
+[F8:41]| const clearTasksButton = document.getElementById("clear-tasks");
+[F8:42]| const taskList = document.getElementById("task-list");
+[F8:43]| const taskDocTitle = document.getElementById("task-doc-title");
+[F8:44]| const taskDetailsPanel = document.getElementById("task-details");
+[F8:45]| const taskDetailsStep = document.getElementById("task-details-step");
+[F8:46]| const taskDetailsMeta = document.getElementById("task-details-meta");
+[F8:47]| const taskDetailsBody = document.getElementById("task-details-body");
+[F8:48]| const taskProgress = document.getElementById("task-progress");
+[F8:49]| const chatMessages = document.getElementById("chat-messages");
+[F8:50]| const chatStatus = document.getElementById("chat-status");
+[F8:51]| const chatInput = document.getElementById("chat-input");
+[F8:52]| const sendChatButton = document.getElementById("send-chat");
+[F8:53]| const clearChatButton = document.getElementById("clear-chat");
+[F8:54]| const chatDrawerToggle = document.getElementById("chat-drawer-toggle");
+[F8:55]| 
+[F8:56]| // Page navigation
+[F8:57]| const mainPage = document.getElementById("main-page");
+[F8:58]| const settingsPage = document.getElementById("settings-page");
+[F8:59]| const openSettingsButton = document.getElementById("open-settings");
+[F8:60]| const settingsBackButton = document.getElementById("settings-back");
+[F8:61]| 
+[F8:62]| // Settings page controls
+[F8:63]| const providersList = document.getElementById("providers-list");
+[F8:64]| const providerNewButton = document.getElementById("provider-new");
+[F8:65]| const providerNameInput = document.getElementById("provider-name");
+[F8:66]| const providerKeyInput = document.getElementById("provider-key");
+[F8:67]| const providerUrlInput = document.getElementById("provider-url");
+[F8:68]| const providerModelInput = document.getElementById("provider-model");
+[F8:69]| const providerSaveButton = document.getElementById("provider-save");
+[F8:70]| const providerDeleteButton = document.getElementById("provider-delete");
+[F8:71]| const layoutModeSelect = document.getElementById("layout-mode");
+[F8:72]| 
+[F8:73]| let markedConfigured = false;
+[F8:74]| 
+[F8:75]| function escapeHtml(text) {
+[F8:76]|   return String(text)
+[F8:77]|     .replaceAll("&", "&amp;")
+[F8:78]|     .replaceAll("<", "&lt;")
+[F8:79]|     .replaceAll(">", "&gt;")
+[F8:80]|     .replaceAll('"', "&quot;")
+[F8:81]|     .replaceAll("'", "&#39;");
+[F8:82]| }
+[F8:83]| 
+[F8:84]| function configureMarkedOnce() {
+[F8:85]|   if (markedConfigured) {
+[F8:86]|     return;
+[F8:87]|   }
+[F8:88]|   const markedApi = typeof window !== "undefined" ? window.marked : null;
+[F8:89]|   if (!markedApi || typeof markedApi.setOptions !== "function") {
+[F8:90]|     return;
+[F8:91]|   }
+[F8:92]| 
+[F8:93]|   // Security: we still sanitize output below; these options mostly improve UX.
+[F8:94]|   markedApi.setOptions({
+[F8:95]|     breaks: true,
+[F8:96]|     gfm: true,
+[F8:97]|     headerIds: false,
+[F8:98]|     mangle: false,
+[F8:99]|   });
+[F8:100]|   markedConfigured = true;
+[F8:101]| }
+[F8:102]| 
+[F8:103]| function sanitizeRenderedHtml(unsafeHtml) {
+[F8:104]|   const template = document.createElement("template");
+[F8:105]|   template.innerHTML = String(unsafeHtml || "");
 [F8:106]| 
-[F8:107]| .task-item.done {
-[F8:108]|   opacity: 0.6;
-[F8:109]|   text-decoration: line-through;
-[F8:110]| }
-[F8:111]| 
-[F8:112]| .task-status {
-[F8:113]|   font-size: 12px;
-[F8:114]|   color: var(--muted);
-[F8:115]| }
+[F8:107]|   const blockedTags = new Set([
+[F8:108]|     "script",
+[F8:109]|     "style",
+[F8:110]|     "iframe",
+[F8:111]|     "object",
+[F8:112]|     "embed",
+[F8:113]|     "link",
+[F8:114]|     "meta",
+[F8:115]|   ]);
 [F8:116]| 
-[F8:117]| .chat {
-[F8:118]|   flex: 4;
-[F8:119]|   display: flex;
-[F8:120]|   flex-direction: column;
-[F8:121]|   gap: 10px;
-[F8:122]|   padding: 16px;
-[F8:123]|   overflow: hidden;
-[F8:124]| }
-[F8:125]| 
-[F8:126]| .chat-toolbar {
-[F8:127]|   display: flex;
-[F8:128]|   justify-content: flex-end;
-[F8:129]|   gap: 8px;
-[F8:130]| }
+[F8:117]|   const allowedProtocols = new Set(["http:", "https:", "mailto:"]);
+[F8:118]| 
+[F8:119]|   const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_ELEMENT);
+[F8:120]|   const elements = [];
+[F8:121]|   while (walker.nextNode()) {
+[F8:122]|     elements.push(walker.currentNode);
+[F8:123]|   }
+[F8:124]| 
+[F8:125]|   for (const el of elements) {
+[F8:126]|     const tagName = el.tagName ? el.tagName.toLowerCase() : "";
+[F8:127]|     if (blockedTags.has(tagName)) {
+[F8:128]|       el.remove();
+[F8:129]|       continue;
+[F8:130]|     }
 [F8:131]| 
-[F8:132]| .clear-chat {
-[F8:133]|   background: transparent;
-[F8:134]|   border: 1px solid var(--border);
-[F8:135]|   color: var(--muted);
-[F8:136]|   padding: 6px 10px;
-[F8:137]|   border-radius: 8px;
-[F8:138]|   cursor: pointer;
-[F8:139]|   font-weight: 600;
-[F8:140]| }
-[F8:141]| 
-[F8:142]| .clear-chat:hover {
-[F8:143]|   background: var(--panel);
-[F8:144]|   color: var(--text);
-[F8:145]| }
+[F8:132]|     for (const attr of Array.from(el.attributes || [])) {
+[F8:133]|       const name = attr.name.toLowerCase();
+[F8:134]|       const value = attr.value;
+[F8:135]| 
+[F8:136]|       if (name.startsWith("on") || name === "style") {
+[F8:137]|         el.removeAttribute(attr.name);
+[F8:138]|         continue;
+[F8:139]|       }
+[F8:140]| 
+[F8:141]|       if (name === "href" || name === "src") {
+[F8:142]|         const trimmed = String(value || "").trim();
+[F8:143]|         if (!trimmed) {
+[F8:144]|           continue;
+[F8:145]|         }
 [F8:146]| 
-[F8:147]| .settings-toggle {
-[F8:148]|   background: transparent;
-[F8:149]|   border: 1px solid var(--border);
-[F8:150]|   color: var(--muted);
-[F8:151]|   padding: 6px 8px;
-[F8:152]|   border-radius: 8px;
-[F8:153]|   cursor: pointer;
-[F8:154]| }
-[F8:155]| 
-[F8:156]| .settings-icon {
-[F8:157]|   font-size: 16px;
-[F8:158]|   line-height: 1;
-[F8:159]| }
-[F8:160]| 
-[F8:161]| .settings-toggle:hover {
-[F8:162]|   background: var(--panel);
-[F8:163]|   color: var(--text);
-[F8:164]| }
-[F8:165]| 
-[F8:166]| .settings {
-[F8:167]|   display: none;
-[F8:168]|   flex-direction: column;
-[F8:169]|   gap: 12px;
-[F8:170]|   background: var(--bg);
-[F8:171]|   padding: 12px;
-[F8:172]|   border: 1px solid var(--border);
-[F8:173]|   border-radius: 8px;
-[F8:174]| }
-[F8:175]| 
-[F8:176]| .settings.visible {
-[F8:177]|   display: flex;
+[F8:147]|         // Allow in-page anchors and relative URLs.
+[F8:148]|         if (trimmed.startsWith("#") || trimmed.startsWith("/") || trimmed.startsWith(".")) {
+[F8:149]|           continue;
+[F8:150]|         }
+[F8:151]| 
+[F8:152]|         try {
+[F8:153]|           const parsed = new URL(trimmed, window.location.href);
+[F8:154]|           if (!allowedProtocols.has(parsed.protocol)) {
+[F8:155]|             el.removeAttribute(attr.name);
+[F8:156]|           }
+[F8:157]|         } catch (error) {
+[F8:158]|           el.removeAttribute(attr.name);
+[F8:159]|         }
+[F8:160]|       }
+[F8:161]|     }
+[F8:162]|   }
+[F8:163]| 
+[F8:164]|   return template.innerHTML;
+[F8:165]| }
+[F8:166]| 
+[F8:167]| function renderMarkdownToSafeHtml(markdownText) {
+[F8:168]|   const source = String(markdownText || "");
+[F8:169]|   const markedApi = typeof window !== "undefined" ? window.marked : null;
+[F8:170]|   if (!markedApi || typeof markedApi.parse !== "function") {
+[F8:171]|     // Fallback: escape and preserve line breaks.
+[F8:172]|     return escapeHtml(source).replaceAll("\n", "<br>");
+[F8:173]|   }
+[F8:174]| 
+[F8:175]|   configureMarkedOnce();
+[F8:176]|   const rendered = markedApi.parse(source);
+[F8:177]|   return sanitizeRenderedHtml(rendered);
 [F8:178]| }
 [F8:179]| 
-[F8:180]| .provider-manager {
-[F8:181]|   display: flex;
-[F8:182]|   gap: 6px;
-[F8:183]| }
-[F8:184]| 
-[F8:185]| .provider-manager select {
-[F8:186]|   flex: 1;
-[F8:187]|   background: var(--panel);
-[F8:188]|   border: 1px solid var(--border);
-[F8:189]|   color: var(--text);
-[F8:190]|   padding: 6px 8px;
-[F8:191]|   border-radius: 8px;
-[F8:192]| }
-[F8:193]| 
-[F8:194]| .provider-action {
-[F8:195]|   background: transparent;
-[F8:196]|   border: 1px solid var(--border);
-[F8:197]|   color: var(--muted);
-[F8:198]|   padding: 6px 10px;
-[F8:199]|   border-radius: 8px;
-[F8:200]|   cursor: pointer;
-[F8:201]|   font-weight: 600;
-[F8:202]| }
-[F8:203]| 
-[F8:204]| .provider-action:hover {
-[F8:205]|   background: var(--panel);
-[F8:206]|   color: var(--text);
-[F8:207]| }
-[F8:208]| 
-[F8:209]| .settings label {
-[F8:210]|   font-size: 12px;
-[F8:211]|   display: flex;
-[F8:212]|   flex-direction: column;
-[F8:213]|   gap: 4px;
-[F8:214]| }
-[F8:215]| 
-[F8:216]| .settings input {
-[F8:217]|   background: var(--panel);
-[F8:218]|   border: 1px solid var(--border);
-[F8:219]|   color: var(--text);
-[F8:220]|   padding: 6px 8px;
-[F8:221]|   border-radius: 8px;
-[F8:222]| }
-[F8:223]| 
-[F8:224]| .chat-messages {
-[F8:225]|   flex: 1;
-[F8:226]|   overflow-y: auto;
-[F8:227]|   background: var(--panel);
-[F8:228]|   border: 1px solid var(--border);
-[F8:229]|   padding: 10px;
-[F8:230]|   border-radius: 10px;
-[F8:231]|   display: flex;
-[F8:232]|   flex-direction: column;
-[F8:233]|   gap: 8px;
-[F8:234]| }
-[F8:235]| 
-[F8:236]| .chat-bubble {
-[F8:237]|   padding: 8px 10px;
-[F8:238]|   border-radius: 10px;
-[F8:239]|   max-width: 90%;
-[F8:240]|   line-height: 1.4;
-[F8:241]|   white-space: pre-wrap;
-[F8:242]|   font-family: inherit;
-[F8:243]| }
-[F8:244]| 
-[F8:245]| .chat-bubble.user {
-[F8:246]|   align-self: flex-end;
-[F8:247]|   background: var(--accent);
-[F8:248]|   color: white;
-[F8:249]| }
-[F8:250]| 
-[F8:251]| .chat-bubble.assistant {
-[F8:252]|   align-self: flex-start;
-[F8:253]|   background: #111827;
-[F8:254]|   color: var(--text);
-[F8:255]| }
-[F8:256]| 
-[F8:257]| .chat-bubble.system {
-[F8:258]|   align-self: center;
-[F8:259]|   background: transparent;
-[F8:260]|   color: var(--muted);
-[F8:261]|   font-size: 12px;
-[F8:262]| }
+[F8:180]| function persistLayoutMode() {
+[F8:181]|   localStorage.setItem(LAYOUT_MODE_KEY, layoutMode);
+[F8:182]| }
+[F8:183]| 
+[F8:184]| function applyLayoutMode() {
+[F8:185]|   if (!document.body) {
+[F8:186]|     return;
+[F8:187]|   }
+[F8:188]|   document.body.classList.toggle("layout-inline", layoutMode === "inline");
+[F8:189]|   document.body.classList.toggle("layout-nano", layoutMode === "nano");
+[F8:190]| }
+[F8:191]| 
+[F8:192]| function setChatCollapsed(nextCollapsed) {
+[F8:193]|   chatCollapsed = Boolean(nextCollapsed);
+[F8:194]|   if (document.body) {
+[F8:195]|     document.body.classList.toggle("chat-collapsed", chatCollapsed);
+[F8:196]|   }
+[F8:197]|   if (chatDrawerToggle) {
+[F8:198]|     chatDrawerToggle.textContent = chatCollapsed ? "▼" : "▲";
+[F8:199]|     chatDrawerToggle.setAttribute("aria-expanded", chatCollapsed ? "false" : "true");
+[F8:200]|   }
+[F8:201]| }
+[F8:202]| 
+[F8:203]| function openSettingsPage() {
+[F8:204]|   if (mainPage) {
+[F8:205]|     mainPage.classList.add("hidden");
+[F8:206]|   }
+[F8:207]|   if (settingsPage) {
+[F8:208]|     settingsPage.classList.remove("hidden");
+[F8:209]|   }
+[F8:210]|   renderProvidersList();
+[F8:211]|   fillProviderForm();
+[F8:212]|   if (layoutModeSelect) {
+[F8:213]|     layoutModeSelect.value = layoutMode;
+[F8:214]|   }
+[F8:215]| }
+[F8:216]| 
+[F8:217]| function openMainPage() {
+[F8:218]|   if (settingsPage) {
+[F8:219]|     settingsPage.classList.add("hidden");
+[F8:220]|   }
+[F8:221]|   if (mainPage) {
+[F8:222]|     mainPage.classList.remove("hidden");
+[F8:223]|   }
+[F8:224]| }
+[F8:225]| 
+[F8:226]| function loadTasks() {
+[F8:227]|   try {
+[F8:228]|     const raw = localStorage.getItem(TASKS_KEY);
+[F8:229]|     tasks = raw ? JSON.parse(raw) : [];
+[F8:230]|   } catch (error) {
+[F8:231]|     tasks = [];
+[F8:232]|   }
+[F8:233]| 
+[F8:234]|   const storedActive = localStorage.getItem(ACTIVE_TASK_KEY);
+[F8:235]|   activeTaskId = storedActive ? Number(storedActive) : null;
+[F8:236]| 
+[F8:237]|   if (!tasks.find((task) => task.id === activeTaskId)) {
+[F8:238]|     activeTaskId = null;
+[F8:239]|   }
+[F8:240]| 
+[F8:241]|   const cachedChat = localStorage.getItem(TEMP_CHAT_KEY);
+[F8:242]|   if (cachedChat) {
+[F8:243]|     try {
+[F8:244]|       const parsed = JSON.parse(cachedChat);
+[F8:245]|       if (Array.isArray(parsed)) {
+[F8:246]|         chatHistory = parsed;
+[F8:247]|       }
+[F8:248]|     } catch (error) {
+[F8:249]|       chatHistory = [];
+[F8:250]|     }
+[F8:251]|   }
+[F8:252]| }
+[F8:253]| 
+[F8:254]| function ensureActiveTaskSelection() {
+[F8:255]|   if (activeTaskId && tasks.find((task) => task.id === activeTaskId)) {
+[F8:256]|     return;
+[F8:257]|   }
+[F8:258]| 
+[F8:259]|   if (layoutMode === "nano") {
+[F8:260]|     activeTaskId = null;
+[F8:261]|     return;
+[F8:262]|   }
 [F8:263]| 
-[F8:264]| .chat-status {
-[F8:265]|   min-height: 18px;
-[F8:266]|   font-size: 12px;
-[F8:267]|   color: var(--muted);
-[F8:268]| }
-[F8:269]| 
-[F8:270]| .chat-input {
-[F8:271]|   display: flex;
-[F8:272]|   gap: 8px;
-[F8:273]| }
-[F8:274]| 
-[F8:275]| #chat-input {
-[F8:276]|   flex: 1;
-[F8:277]|   background: var(--panel);
-[F8:278]|   border: 1px solid var(--border);
-[F8:279]|   color: var(--text);
-[F8:280]|   padding: 8px 10px;
-[F8:281]|   border-radius: 10px;
-[F8:282]| }
+[F8:264]|   const firstPending = tasks.find((task) => task.status === "pending");
+[F8:265]|   activeTaskId = firstPending ? firstPending.id : null;
+[F8:266]|   saveTasks();
+[F8:267]| }
+[F8:268]| 
+[F8:269]| function saveTasks() {
+[F8:270]|   localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+[F8:271]|   if (activeTaskId) {
+[F8:272]|     localStorage.setItem(ACTIVE_TASK_KEY, String(activeTaskId));
+[F8:273]|   } else {
+[F8:274]|     localStorage.removeItem(ACTIVE_TASK_KEY);
+[F8:275]|   }
+[F8:276]| }
+[F8:277]| 
+[F8:278]| function getActiveTask() {
+[F8:279]|   if (!activeTaskId) {
+[F8:280]|     return null;
+[F8:281]|   }
+[F8:282]|   return tasks.find((task) => task.id === activeTaskId) || null;
+[F8:283]| }
+[F8:284]| 
+[F8:285]| function getActiveTaskMeta(task) {
+[F8:286]|   const payload = task?.context_payload || {};
+[F8:287]|   const documentTitle = payload.document_title || null;
+[F8:288]|   const groupTitle = payload.group_title || null;
+[F8:289]|   const details = payload.details || "";
+[F8:290]|   return { documentTitle, groupTitle, details };
+[F8:291]| }
+[F8:292]| 
+[F8:293]| function renderActiveTaskDetails() {
+[F8:294]|   applyLayoutMode();
+[F8:295]| 
+[F8:296]|   const activeTask = getActiveTask();
+[F8:297]|   const { documentTitle, groupTitle, details } = getActiveTaskMeta(activeTask);
+[F8:298]| 
+[F8:299]|   if (taskDocTitle) {
+[F8:300]|     taskDocTitle.textContent = documentTitle ? `# ${documentTitle}` : "";
+[F8:301]|   }
+[F8:302]| 
+[F8:303]|   if (!taskDetailsPanel || layoutMode !== "split") {
+[F8:304]|     return;
+[F8:305]|   }
+[F8:306]| 
+[F8:307]|   if (!activeTask) {
+[F8:308]|     taskDetailsStep.textContent = "No active step";
+[F8:309]|     taskDetailsMeta.textContent = "";
+[F8:310]|     taskDetailsBody.textContent = "Select a step to view details.";
+[F8:311]|     return;
+[F8:312]|   }
+[F8:313]| 
+[F8:314]|   taskDetailsStep.textContent = activeTask.text;
+[F8:315]|   taskDetailsMeta.textContent = groupTitle ? `## ${groupTitle}` : "";
+[F8:316]|   taskDetailsBody.innerHTML = renderMarkdownToSafeHtml(details || "(no details)");
+[F8:317]| }
+[F8:318]| 
+[F8:319]| function renderTasks() {
+[F8:320]|   taskList.innerHTML = "";
+[F8:321]| 
+[F8:322]|   renderActiveTaskDetails();
+[F8:323]| 
+[F8:324]|   if (taskProgress) {
+[F8:325]|     const totalTasks = tasks.length;
+[F8:326]|     const doneTasks = tasks.filter((task) => task.status === "done").length;
+[F8:327]|     taskProgress.textContent = `${doneTasks}/${totalTasks} 完成`;
+[F8:328]|   }
+[F8:329]| 
+[F8:330]|   if (tasks.length === 0) {
+[F8:331]|     const empty = document.createElement("div");
+[F8:332]|     empty.className = "task-status";
+[F8:333]|     empty.textContent = "No tasks yet. Paste a list to begin.";
+[F8:334]|     taskList.appendChild(empty);
+[F8:335]|     renderActiveTaskDetails();
+[F8:336]|     return;
+[F8:337]|   }
+[F8:338]| 
+[F8:339]|   let tasksToRender = tasks;
+[F8:340]|   let activeIdx = -1;
+[F8:341]|   const isNanoMode = layoutMode === "nano";
+[F8:342]|   if (isNanoMode && activeTaskId) {
+[F8:343]|     activeIdx = tasks.findIndex((t) => t.id === activeTaskId);
+[F8:344]|     if (activeIdx >= 0) {
+[F8:345]|       const start = Math.max(0, activeIdx - 1);
+[F8:346]|       const end = Math.min(tasks.length, activeIdx + 2);
+[F8:347]|       tasksToRender = tasks.slice(start, end);
+[F8:348]|     }
+[F8:349]|   }
+[F8:350]| 
+[F8:351]|   if (document.body) {
+[F8:352]|     document.body.classList.toggle("nano-view", isNanoMode && activeIdx >= 0);
+[F8:353]|   }
+[F8:354]| 
+[F8:355]|   tasksToRender.forEach((task) => {
+[F8:356]|     const item = document.createElement("div");
+[F8:357]|     item.className = "task-item";
+[F8:358]|     if (task.status === "done") {
+[F8:359]|       item.classList.add("done");
+[F8:360]|     }
+[F8:361]|     if (task.id === activeTaskId) {
+[F8:362]|       item.classList.add("active");
+[F8:363]|     } else if (isNanoMode && activeIdx >= 0) {
+[F8:364]|       item.classList.add("nano-secondary");
+[F8:365]|     }
+[F8:366]|     item.dataset.id = String(task.id);
+[F8:367]| 
+[F8:368]|     const row = document.createElement("div");
+[F8:369]|     row.className = "task-item-row";
+[F8:370]| 
+[F8:371]|     const text = document.createElement("span");
+[F8:372]|     text.textContent = task.text;
+[F8:373]| 
+[F8:374]|     const status = document.createElement("span");
+[F8:375]|     status.className = "task-status";
+[F8:376]|     status.textContent = task.status === "done" ? "Done" : "Active";
+[F8:377]| 
+[F8:378]|     row.appendChild(text);
+[F8:379]|     row.appendChild(status);
+[F8:380]|     item.appendChild(row);
+[F8:381]| 
+[F8:382]|     if ((layoutMode === "inline" || layoutMode === "nano") && task.id === activeTaskId) {
+[F8:383]|       const { documentTitle, groupTitle, details } = getActiveTaskMeta(task);
+[F8:384]|       const metaParts = [];
+[F8:385]|       if (documentTitle) {
+[F8:386]|         metaParts.push(`# ${documentTitle}`);
+[F8:387]|       }
+[F8:388]|       if (groupTitle) {
+[F8:389]|         metaParts.push(`## ${groupTitle}`);
+[F8:390]|       }
+[F8:391]| 
+[F8:392]|       if (metaParts.length > 0) {
+[F8:393]|         const meta = document.createElement("div");
+[F8:394]|         meta.className = "task-inline-meta";
+[F8:395]|         meta.textContent = metaParts.join(" · ");
+[F8:396]|         item.appendChild(meta);
+[F8:397]|       }
+[F8:398]| 
+[F8:399]|       const body = document.createElement("div");
+[F8:400]|       body.className = "task-inline-details md";
+[F8:401]|       body.innerHTML = renderMarkdownToSafeHtml(details || "(no details)");
+[F8:402]|       item.classList.add("with-details");
+[F8:403]|       item.appendChild(body);
+[F8:404]|     }
+[F8:405]| 
+[F8:406]|     item.addEventListener("click", () => toggleTask(task.id));
+[F8:407]|     taskList.appendChild(item);
+[F8:408]|   });
+[F8:409]| 
+[F8:410]|   renderActiveTaskDetails();
+[F8:411]| }
+[F8:412]| 
+[F8:413]| function toggleTask(taskId) {
+[F8:414]|   const task = tasks.find((item) => item.id === taskId);
+[F8:415]|   if (!task) {
+[F8:416]|     return;
+[F8:417]|   }
+[F8:418]| 
+[F8:419]|   const switchingTask = activeTaskId && taskId !== activeTaskId;
+[F8:420]|   if (switchingTask) {
+[F8:421]|     clearChatContext();
+[F8:422]|   }
+[F8:423]| 
+[F8:424]|   if (taskId !== activeTaskId) {
+[F8:425]|     activeTaskId = task.id;
+[F8:426]|     if (task.status === "done") {
+[F8:427]|       task.status = "pending";
+[F8:428]|     }
+[F8:429]|   } else {
+[F8:430]|     task.status = task.status === "done" ? "pending" : "done";
+[F8:431]|     if (task.status === "done") {
+[F8:432]|       const nextPending = tasks.find((item) => item.status === "pending");
+[F8:433]|       activeTaskId = nextPending ? nextPending.id : null;
+[F8:434]|     }
+[F8:435]|   }
+[F8:436]| 
+[F8:437]|   saveTasks();
+[F8:438]|   renderTasks();
+[F8:439]| }
+[F8:440]| 
+[F8:441]| function ingestTasks() {
+[F8:442]|   const rawText = taskInput.value;
+[F8:443]|   if (!rawText || !rawText.trim()) {
+[F8:444]|     return;
+[F8:445]|   }
+[F8:446]| 
+[F8:447]|   // Spec (v1):
+[F8:448]|   // - `### ` headings define steps (ingested as tasks).
+[F8:449]|   // - Indented continuation lines under a step become `context_payload.details`.
+[F8:450]|   // - `#` (doc title) and `##` (group) are captured as metadata for future use.
+[F8:451]|   const lines = rawText.replace(/\r\n/g, "\n").split("\n");
+[F8:452]| 
+[F8:453]|   let documentTitle = null;
+[F8:454]|   let groupTitle = null;
+[F8:455]| 
+[F8:456]|   const steps = [];
+[F8:457]|   let currentStep = null;
+[F8:458]| 
+[F8:459]|   function flushCurrentStep() {
+[F8:460]|     if (!currentStep) {
+[F8:461]|       return;
+[F8:462]|     }
+[F8:463]| 
+[F8:464]|     const details = currentStep.detailsLines
+[F8:465]|       .join("\n")
+[F8:466]|       .replace(/\s+$/g, "");
+[F8:467]|     steps.push({
+[F8:468]|       text: currentStep.text,
+[F8:469]|       documentTitle: currentStep.documentTitle,
+[F8:470]|       groupTitle: currentStep.groupTitle,
+[F8:471]|       details,
+[F8:472]|     });
+[F8:473]|     currentStep = null;
+[F8:474]|   }
+[F8:475]| 
+[F8:476]|   for (const line of lines) {
+[F8:477]|     const trimmed = line.trimEnd();
+[F8:478]|     if (!trimmed.trim()) {
+[F8:479]|       continue;
+[F8:480]|     }
+[F8:481]| 
+[F8:482]|     const headerMatch = trimmed.match(/^(#{1,3})\s+(.*)$/);
+[F8:483]|     if (headerMatch) {
+[F8:484]|       const level = headerMatch[1].length;
+[F8:485]|       const title = (headerMatch[2] || "").trim();
+[F8:486]|       if (!title) {
+[F8:487]|         continue;
+[F8:488]|       }
+[F8:489]| 
+[F8:490]|       if (level === 1) {
+[F8:491]|         flushCurrentStep();
+[F8:492]|         documentTitle = title;
+[F8:493]|         continue;
+[F8:494]|       }
+[F8:495]| 
+[F8:496]|       if (level === 2) {
+[F8:497]|         flushCurrentStep();
+[F8:498]|         groupTitle = title;
+[F8:499]|         continue;
+[F8:500]|       }
+[F8:501]| 
+[F8:502]|       if (level === 3) {
+[F8:503]|         flushCurrentStep();
+[F8:504]|         currentStep = {
+[F8:505]|           text: title,
+[F8:506]|           documentTitle,
+[F8:507]|           groupTitle,
+[F8:508]|           detailsLines: [],
+[F8:509]|         };
+[F8:510]|         continue;
+[F8:511]|       }
+[F8:512]|     }
+[F8:513]| 
+[F8:514]|     const isIndented = /^\s+/.test(line);
+[F8:515]|     if (currentStep && isIndented) {
+[F8:516]|       const normalized = line.startsWith("\t")
+[F8:517]|         ? line.slice(1)
+[F8:518]|         : line.replace(/^\s{1,2}/, "");
+[F8:519]|       currentStep.detailsLines.push(normalized.trimEnd());
+[F8:520]|     }
+[F8:521]|   }
+[F8:522]| 
+[F8:523]|   flushCurrentStep();
+[F8:524]|   if (steps.length === 0) {
+[F8:525]|     alert("No steps found. Use Markdown headings like `### Step name`.");
+[F8:526]|     return;
+[F8:527]|   }
+[F8:528]| 
+[F8:529]|   const newTasks = steps.map((step, index) => ({
+[F8:530]|     id: Date.now() + index,
+[F8:531]|     text: step.text,
+[F8:532]|     status: "pending",
+[F8:533]|     context_payload: {
+[F8:534]|       document_title: step.documentTitle,
+[F8:535]|       group_title: step.groupTitle,
+[F8:536]|       details: step.details,
+[F8:537]|     },
+[F8:538]|   }));
+[F8:539]| 
+[F8:540]|   tasks = [...tasks, ...newTasks];
+[F8:541]|   taskInput.value = "";
+[F8:542]| 
+[F8:543]|   if (!activeTaskId && newTasks.length > 0 && layoutMode !== "nano") {
+[F8:544]|     activeTaskId = newTasks[0].id;
+[F8:545]|   }
+[F8:546]| 
+[F8:547]|   saveTasks();
+[F8:548]|   renderTasks();
+[F8:549]| }
+[F8:550]| 
+[F8:551]| function clearAllTasks() {
+[F8:552]|   if (tasks.length === 0) {
+[F8:553]|     return;
+[F8:554]|   }
+[F8:555]| 
+[F8:556]|   const confirmed = confirm("Clear all tasks? This cannot be undone.");
+[F8:557]|   if (!confirmed) {
+[F8:558]|     return;
+[F8:559]|   }
+[F8:560]| 
+[F8:561]|   tasks = [];
+[F8:562]|   activeTaskId = null;
+[F8:563]|   saveTasks();
+[F8:564]|   renderTasks();
+[F8:565]| 
+[F8:566]|   chatHistory = [];
+[F8:567]|   chatMessages.innerHTML = "";
+[F8:568]|   persistChatHistory();
+[F8:569]|   appendMessage("system", "Tasks cleared.");
+[F8:570]| }
+[F8:571]| 
+[F8:572]| function showOverview() {
+[F8:573]|   if (!activeTaskId) {
+[F8:574]|     return;
+[F8:575]|   }
+[F8:576]|   activeTaskId = null;
+[F8:577]|   saveTasks();
+[F8:578]|   renderTasks();
+[F8:579]| }
+[F8:580]| 
+[F8:581]| function normalizeProviders(raw) {
+[F8:582]|   const parsed = Array.isArray(raw) ? raw : [];
+[F8:583]|   const normalized = parsed
+[F8:584]|     .map((p, idx) => ({
+[F8:585]|       name: (p?.name || `Config ${idx + 1}`).trim(),
+[F8:586]|       key: (p?.key || "").trim(),
+[F8:587]|       url: (p?.url || DEFAULT_BASE_URL).trim(),
+[F8:588]|       model: (p?.model || DEFAULT_MODEL).trim(),
+[F8:589]|     }))
+[F8:590]|     .filter((p) => p.name);
+[F8:591]| 
+[F8:592]|   if (normalized.length === 0) {
+[F8:593]|     normalized.push({
+[F8:594]|       name: "Default",
+[F8:595]|       key: "",
+[F8:596]|       url: DEFAULT_BASE_URL,
+[F8:597]|       model: DEFAULT_MODEL,
+[F8:598]|     });
+[F8:599]|   }
+[F8:600]|   return normalized;
+[F8:601]| }
+[F8:602]| 
+[F8:603]| function persistProviders() {
+[F8:604]|   localStorage.setItem(PROVIDERS_KEY, JSON.stringify(providers));
+[F8:605]|   localStorage.setItem(ACTIVE_PROVIDER_INDEX, String(currentProviderIdx));
+[F8:606]| }
+[F8:607]| 
+[F8:608]| function loadSettings() {
+[F8:609]|   const raw = localStorage.getItem(PROVIDERS_KEY);
+[F8:610]|   let parsed;
+[F8:611]|   try {
+[F8:612]|     parsed = raw ? JSON.parse(raw) : null;
+[F8:613]|   } catch (error) {
+[F8:614]|     parsed = null;
+[F8:615]|   }
+[F8:616]|   providers = normalizeProviders(parsed);
+[F8:617]| 
+[F8:618]|   currentProviderIdx = Number(localStorage.getItem(ACTIVE_PROVIDER_INDEX)) || 0;
+[F8:619]|   if (currentProviderIdx < 0 || currentProviderIdx >= providers.length) {
+[F8:620]|     currentProviderIdx = 0;
+[F8:621]|   }
+[F8:622]| 
+[F8:623]|   const storedLayout = localStorage.getItem(LAYOUT_MODE_KEY);
+[F8:624]|   layoutMode = storedLayout === "inline" || storedLayout === "split" || storedLayout === "nano" ? storedLayout : "split";
+[F8:625]|   if (layoutModeSelect) {
+[F8:626]|     layoutModeSelect.value = layoutMode;
+[F8:627]|   }
+[F8:628]| }
+[F8:629]| 
+[F8:630]| function renderProvidersList() {
+[F8:631]|   if (!providersList) {
+[F8:632]|     return;
+[F8:633]|   }
+[F8:634]| 
+[F8:635]|   providersList.innerHTML = "";
+[F8:636]|   providers.forEach((provider, index) => {
+[F8:637]|     const row = document.createElement("div");
+[F8:638]|     row.className = "provider-row";
+[F8:639]|     if (index === currentProviderIdx) {
+[F8:640]|       row.classList.add("active");
+[F8:641]|     }
+[F8:642]| 
+[F8:643]|     const main = document.createElement("div");
+[F8:644]|     main.className = "provider-row-main";
+[F8:645]| 
+[F8:646]|     const name = document.createElement("div");
+[F8:647]|     name.className = "provider-row-name";
+[F8:648]|     name.textContent = provider.name || `Config ${index + 1}`;
+[F8:649]| 
+[F8:650]|     const meta = document.createElement("div");
+[F8:651]|     meta.className = "provider-row-meta";
+[F8:652]|     const url = (provider.url || DEFAULT_BASE_URL).replace(/\/+$/, "");
+[F8:653]|     meta.textContent = `${url} · ${provider.model || DEFAULT_MODEL}`;
+[F8:654]| 
+[F8:655]|     main.appendChild(name);
+[F8:656]|     main.appendChild(meta);
+[F8:657]| 
+[F8:658]|     const badge = document.createElement("div");
+[F8:659]|     badge.className = "provider-row-badge";
+[F8:660]|     badge.textContent = index === currentProviderIdx ? "Selected" : "Use";
+[F8:661]| 
+[F8:662]|     row.appendChild(main);
+[F8:663]|     row.appendChild(badge);
+[F8:664]|     row.addEventListener("click", () => {
+[F8:665]|       currentProviderIdx = index;
+[F8:666]|       localStorage.setItem(ACTIVE_PROVIDER_INDEX, String(currentProviderIdx));
+[F8:667]|       renderProvidersList();
+[F8:668]|       fillProviderForm();
+[F8:669]|     });
+[F8:670]|     providersList.appendChild(row);
+[F8:671]|   });
+[F8:672]| }
+[F8:673]| 
+[F8:674]| function fillProviderForm() {
+[F8:675]|   const provider = providers[currentProviderIdx];
+[F8:676]|   if (!provider) {
+[F8:677]|     return;
+[F8:678]|   }
+[F8:679]|   if (providerNameInput) {
+[F8:680]|     providerNameInput.value = provider.name || "";
+[F8:681]|   }
+[F8:682]|   if (providerKeyInput) {
+[F8:683]|     providerKeyInput.value = provider.key || "";
+[F8:684]|   }
+[F8:685]|   if (providerUrlInput) {
+[F8:686]|     providerUrlInput.value = provider.url || DEFAULT_BASE_URL;
+[F8:687]|   }
+[F8:688]|   if (providerModelInput) {
+[F8:689]|     providerModelInput.value = provider.model || DEFAULT_MODEL;
+[F8:690]|   }
+[F8:691]| }
+[F8:692]| 
+[F8:693]| function saveSelectedProviderFromForm() {
+[F8:694]|   const provider = providers[currentProviderIdx];
+[F8:695]|   if (!provider) {
+[F8:696]|     return;
+[F8:697]|   }
+[F8:698]| 
+[F8:699]|   provider.name = (providerNameInput?.value || provider.name || "").trim() || provider.name;
+[F8:700]|   provider.key = (providerKeyInput?.value || "").trim();
+[F8:701]|   provider.url = (providerUrlInput?.value || DEFAULT_BASE_URL).trim() || DEFAULT_BASE_URL;
+[F8:702]|   provider.model = (providerModelInput?.value || DEFAULT_MODEL).trim() || DEFAULT_MODEL;
+[F8:703]|   persistProviders();
+[F8:704]|   renderProvidersList();
+[F8:705]| }
+[F8:706]| 
+[F8:707]| function createNewProvider() {
+[F8:708]|   const nextName = `Config ${providers.length + 1}`;
+[F8:709]|   providers.push({
+[F8:710]|     name: nextName,
+[F8:711]|     key: "",
+[F8:712]|     url: DEFAULT_BASE_URL,
+[F8:713]|     model: DEFAULT_MODEL,
+[F8:714]|   });
+[F8:715]|   currentProviderIdx = providers.length - 1;
+[F8:716]|   persistProviders();
+[F8:717]|   renderProvidersList();
+[F8:718]|   fillProviderForm();
+[F8:719]| }
+[F8:720]| 
+[F8:721]| function deleteSelectedProvider() {
+[F8:722]|   if (providers.length <= 1) {
+[F8:723]|     alert("At least one API config is required.");
+[F8:724]|     return;
+[F8:725]|   }
+[F8:726]|   const confirmed = confirm("Delete selected API config?");
+[F8:727]|   if (!confirmed) {
+[F8:728]|     return;
+[F8:729]|   }
+[F8:730]|   providers.splice(currentProviderIdx, 1);
+[F8:731]|   currentProviderIdx = Math.max(0, currentProviderIdx - 1);
+[F8:732]|   persistProviders();
+[F8:733]|   renderProvidersList();
+[F8:734]|   fillProviderForm();
+[F8:735]| }
+[F8:736]| 
+[F8:737]| function appendMessage(role, content) {
+[F8:738]|   const bubble = document.createElement("div");
+[F8:739]|   bubble.className = `chat-bubble ${role} md`;
+[F8:740]|   bubble.innerHTML = renderMarkdownToSafeHtml(content);
+[F8:741]|   chatMessages.appendChild(bubble);
+[F8:742]|   chatMessages.scrollTop = chatMessages.scrollHeight;
+[F8:743]|   persistChatHistory();
+[F8:744]| }
+[F8:745]| 
+[F8:746]| async function loadSystemPrompt() {
+[F8:747]|   try {
+[F8:748]|     const promptUrl =
+[F8:749]|       typeof chrome !== "undefined" && chrome.runtime?.getURL
+[F8:750]|         ? chrome.runtime.getURL(PROMPT_PATH)
+[F8:751]|         : PROMPT_PATH;
+[F8:752]|     const response = await fetch(promptUrl);
+[F8:753]|     if (!response.ok) {
+[F8:754]|       return;
+[F8:755]|     }
+[F8:756]|     const text = await response.text();
+[F8:757]|     if (text && text.trim()) {
+[F8:758]|       systemPromptTemplate = text.trim();
+[F8:759]|     }
+[F8:760]|   } catch (error) {
+[F8:761]|     systemPromptTemplate = DEFAULT_SYSTEM_PROMPT_TEMPLATE;
+[F8:762]|   }
+[F8:763]| }
+[F8:764]| 
+[F8:765]| function buildSystemPrompt(activeTaskText) {
+[F8:766]|   const template = systemPromptTemplate || DEFAULT_SYSTEM_PROMPT_TEMPLATE;
+[F8:767]|   const totalTasks = tasks.length;
+[F8:768]|   const doneTasks = tasks.filter((task) => task.status === "done").length;
+[F8:769]|   const activeTaskDetails = getActiveTaskMeta(getActiveTask()).details || "(no details)";
+[F8:770]|   const pendingTasks = tasks
+[F8:771]|     .filter((task) => task.status === "pending")
+[F8:772]|     .map((task) => `- ${task.text}`)
+[F8:773]|     .join("\n");
+[F8:774]|   const pendingText = pendingTasks || "All tasks completed!";
+[F8:775]| 
+[F8:776]|   return template
+[F8:777]|     .replaceAll("{TOTAL_TASKS}", String(totalTasks))
+[F8:778]|     .replaceAll("{DONE_TASKS}", String(doneTasks))
+[F8:779]|     .replaceAll("{PENDING_TASKS}", pendingText)
+[F8:780]|     .replaceAll("{ACTIVE_TASK}", activeTaskText)
+[F8:781]|     .replaceAll("{TASK_DETAILS}", activeTaskDetails);
+[F8:782]| }
+[F8:783]| 
+[F8:784]| function persistChatHistory() {
+[F8:785]|   localStorage.setItem(TEMP_CHAT_KEY, JSON.stringify(chatHistory));
+[F8:786]| }
+[F8:787]| 
+[F8:788]| function clearChatContext() {
+[F8:789]|   chatHistory = [];
+[F8:790]|   chatMessages.innerHTML = "";
+[F8:791]|   localStorage.removeItem(TEMP_CHAT_KEY);
+[F8:792]|   appendMessage("system", "Context switched. Memory cleared.");
+[F8:793]| }
+[F8:794]| 
+[F8:795]| function clearChatHistory() {
+[F8:796]|   chatHistory = [];
+[F8:797]|   chatMessages.innerHTML = "";
+[F8:798]|   localStorage.removeItem(TEMP_CHAT_KEY);
+[F8:799]|   appendMessage("system", "Chat cleared.");
+[F8:800]| }
+[F8:801]| 
+[F8:802]| function restoreChatHistory() {
+[F8:803]|   if (chatHistory.length === 0) {
+[F8:804]|     return;
+[F8:805]|   }
+[F8:806]| 
+[F8:807]|   chatMessages.innerHTML = "";
+[F8:808]|   chatHistory.forEach((message) => {
+[F8:809]|     if (!message?.role || !message?.content) {
+[F8:810]|       return;
+[F8:811]|     }
+[F8:812]|     appendMessage(message.role, message.content);
+[F8:813]|   });
+[F8:814]| }
+[F8:815]| 
+[F8:816]| async function sendChat() {
+[F8:817]|   const question = chatInput.value.trim();
+[F8:818]|   if (!question) {
+[F8:819]|     return;
+[F8:820]|   }
+[F8:821]| 
+[F8:822]|   const provider = providers[currentProviderIdx] || {
+[F8:823]|     name: "Default",
+[F8:824]|     key: "",
+[F8:825]|     url: DEFAULT_BASE_URL,
+[F8:826]|     model: DEFAULT_MODEL,
+[F8:827]|   };
+[F8:828]| 
+[F8:829]|   const apiKey = (provider.key || "").trim();
+[F8:830]|   if (!apiKey) {
+[F8:831]|     alert("Missing API Key. Open Settings to configure an API.");
+[F8:832]|     return;
+[F8:833]|   }
+[F8:834]| 
+[F8:835]|   const baseUrl = (provider.url || DEFAULT_BASE_URL).trim() || DEFAULT_BASE_URL;
+[F8:836]|   const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
+[F8:837]|   const endpointUrl = `${normalizedBaseUrl}/chat/completions`;
+[F8:838]|   const model = (provider.model || DEFAULT_MODEL).trim() || DEFAULT_MODEL;
+[F8:839]|   const activeTask = tasks.find((task) => task.id === activeTaskId);
+[F8:840]|   const activeTaskText = activeTask ? activeTask.text : "None";
+[F8:841]| 
+[F8:842]|   chatInput.value = "";
+[F8:843]|   appendMessage("user", question);
+[F8:844]|   chatStatus.textContent = "Thinking...";
+[F8:845]| 
+[F8:846]|   // Inject active task context into the system prompt.
+[F8:847]|   const systemPrompt = buildSystemPrompt(activeTaskText);
+[F8:848]| 
+[F8:849]|   chatHistory.push({ role: "user", content: question });
+[F8:850]| 
+[F8:851]|   try {
+[F8:852]|     const response = await fetch(endpointUrl, {
+[F8:853]|       method: "POST",
+[F8:854]|       headers: {
+[F8:855]|         "Content-Type": "application/json",
+[F8:856]|         Authorization: `Bearer ${apiKey}`,
+[F8:857]|       },
+[F8:858]|       body: JSON.stringify({
+[F8:859]|         model,
+[F8:860]|         messages: [{ role: "system", content: systemPrompt }, ...chatHistory],
+[F8:861]|       }),
+[F8:862]|     });
+[F8:863]| 
+[F8:864]|     if (!response.ok) {
+[F8:865]|       const errorText = await response.text();
+[F8:866]|       throw new Error(errorText || "API request failed.");
+[F8:867]|     }
+[F8:868]| 
+[F8:869]|     const data = await response.json();
+[F8:870]|     const reply =
+[F8:871]|       data.choices?.[0]?.message?.content || "No response from assistant.";
+[F8:872]|     chatHistory.push({ role: "assistant", content: reply });
+[F8:873]|     appendMessage("assistant", reply);
+[F8:874]|   } catch (error) {
+[F8:875]|     appendMessage("assistant", `Error: ${error.message}`);
+[F8:876]|   } finally {
+[F8:877]|     chatStatus.textContent = "";
+[F8:878]|   }
+[F8:879]| }
+[F8:880]| 
+[F8:881]| addTasksButton.addEventListener("click", ingestTasks);
+[F8:882]| if (overviewTasksButton) {
+[F8:883]|   overviewTasksButton.addEventListener("click", showOverview);
+[F8:884]| }
+[F8:885]| clearTasksButton.addEventListener("click", clearAllTasks);
+[F8:886]| sendChatButton.addEventListener("click", sendChat);
+[F8:887]| clearChatButton.addEventListener("click", clearChatHistory);
+[F8:888]| 
+[F8:889]| if (openSettingsButton) {
+[F8:890]|   openSettingsButton.addEventListener("click", openSettingsPage);
+[F8:891]| }
+[F8:892]| 
+[F8:893]| if (settingsBackButton) {
+[F8:894]|   settingsBackButton.addEventListener("click", openMainPage);
+[F8:895]| }
+[F8:896]| 
+[F8:897]| if (providerNewButton) {
+[F8:898]|   providerNewButton.addEventListener("click", createNewProvider);
+[F8:899]| }
+[F8:900]| 
+[F8:901]| if (providerSaveButton) {
+[F8:902]|   providerSaveButton.addEventListener("click", saveSelectedProviderFromForm);
+[F8:903]| }
+[F8:904]| 
+[F8:905]| if (providerDeleteButton) {
+[F8:906]|   providerDeleteButton.addEventListener("click", deleteSelectedProvider);
+[F8:907]| }
+[F8:908]| 
+[F8:909]| if (layoutModeSelect) {
+[F8:910]|   layoutModeSelect.addEventListener("change", (event) => {
+[F8:911]|     const value = event.target.value;
+[F8:912]|     layoutMode = value === "inline" || value === "split" || value === "nano" ? value : "split";
+[F8:913]|     persistLayoutMode();
+[F8:914]|     ensureActiveTaskSelection();
+[F8:915]|     renderTasks();
+[F8:916]|   });
+[F8:917]| }
+[F8:918]| 
+[F8:919]| if (chatDrawerToggle) {
+[F8:920]|   chatDrawerToggle.addEventListener("click", () => {
+[F8:921]|     setChatCollapsed(!chatCollapsed);
+[F8:922]|   });
+[F8:923]| }
+[F8:924]| 
+[F8:925]| chatInput.addEventListener("keydown", (event) => {
+[F8:926]|   if (event.key === "Enter") {
+[F8:927]|     sendChat();
+[F8:928]|   }
+[F8:929]| });
+[F8:930]| 
+[F8:931]| document.addEventListener("DOMContentLoaded", () => {
+[F8:932]|   loadSettings();
+[F8:933]|   loadTasks();
+[F8:934]|   ensureActiveTaskSelection();
+[F8:935]|   applyLayoutMode();
+[F8:936]|   renderProvidersList();
+[F8:937]|   fillProviderForm();
+[F8:938]|   renderTasks();
+[F8:939]|   restoreChatHistory();
+[F8:940]|   loadSystemPrompt();
+[F8:941]|   setChatCollapsed(true);
+[F8:942]|   if ("serviceWorker" in navigator && window.location.protocol !== "chrome-extension:") {
+[F8:943]|     navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+[F8:944]|   }
+[F8:945]| });
+
+================================================================================
+文件路径: service-worker.js(F9) (约合大小: 1 KB)
+================================================================================
+[F9:1]| const CACHE_NAME = "rail-pwa-v1";
+[F9:2]| const ASSETS = [
+[F9:3]|   "./",
+[F9:4]|   "./sidepanel.html",
+[F9:5]|   "./styles.css",
+[F9:6]|   "./script.js",
+[F9:7]|   "./marked.min.js",
+[F9:8]|   "./system_prompt.txt",
+[F9:9]|   "./manifest.webmanifest",
+[F9:10]| ];
+[F9:11]| 
+[F9:12]| self.addEventListener("install", (event) => {
+[F9:13]|   event.waitUntil(
+[F9:14]|     caches.open(CACHE_NAME).then(async (cache) => {
+[F9:15]|       // Cache assets individually so a missing optional asset (e.g. marked.min.js)
+[F9:16]|       // doesn't break the whole service worker install.
+[F9:17]|       await Promise.all(
+[F9:18]|         ASSETS.map((asset) =>
+[F9:19]|           cache.add(asset).catch(() => {
+[F9:20]|             // ignore
+[F9:21]|           })
+[F9:22]|         )
+[F9:23]|       );
+[F9:24]|       await self.skipWaiting();
+[F9:25]|     })
+[F9:26]|   );
+[F9:27]| });
+[F9:28]| 
+[F9:29]| self.addEventListener("activate", (event) => {
+[F9:30]|   event.waitUntil(
+[F9:31]|     caches
+[F9:32]|       .keys()
+[F9:33]|       .then((keys) =>
+[F9:34]|         Promise.all(
+[F9:35]|           keys
+[F9:36]|             .filter((key) => key !== CACHE_NAME)
+[F9:37]|             .map((key) => caches.delete(key))
+[F9:38]|         )
+[F9:39]|       )
+[F9:40]|       .then(() => self.clients.claim())
+[F9:41]|   );
+[F9:42]| });
+[F9:43]| 
+[F9:44]| self.addEventListener("fetch", (event) => {
+[F9:45]|   if (event.request.method !== "GET") {
+[F9:46]|     return;
+[F9:47]|   }
+[F9:48]| 
+[F9:49]|   event.respondWith(
+[F9:50]|     caches.match(event.request).then((cached) => {
+[F9:51]|       if (cached) {
+[F9:52]|         return cached;
+[F9:53]|       }
+[F9:54]|       return fetch(event.request).then((response) => {
+[F9:55]|         if (!response || response.status !== 200 || response.type !== "basic") {
+[F9:56]|           return response;
+[F9:57]|         }
+[F9:58]|         const responseClone = response.clone();
+[F9:59]|         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+[F9:60]|         return response;
+[F9:61]|       });
+[F9:62]|     })
+[F9:63]|   );
+[F9:64]| });
+
+================================================================================
+文件路径: sidepanel.html(F10) (约合大小: 4 KB)
+================================================================================
+[F10:1]| <!doctype html>
+[F10:2]| <html lang="en">
+[F10:3]|   <head>
+[F10:4]|     <meta charset="UTF-8" />
+[F10:5]|     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+[F10:6]|     <title>Rail</title>
+[F10:7]|     <link rel="manifest" href="manifest.webmanifest" />
+[F10:8]|     <meta name="theme-color" content="#1e1e1e" />
+[F10:9]|     <link rel="stylesheet" href="styles.css" />
+[F10:10]|   </head>
+[F10:11]|   <body>
+[F10:12]|     <div class="app">
+[F10:13]|       <div id="main-page" class="page">
+[F10:14]|         <section class="tasks">
+[F10:15]|           <header class="panel-header">
+[F10:16]|             <h1>Rail</h1>
+[F10:17]|             <p>Context Anchor · Execution GPS</p>
+[F10:18]|             <p id="task-doc-title" class="doc-title"></p>
+[F10:19]|           </header>
+[F10:20]|           <div class="ingest">
+[F10:21]|             <textarea id="task-input" placeholder="Paste Markdown steps (###), e.g.\n### Do thing\n  details..."></textarea>
+[F10:22]|             <button id="add-tasks">Add Tasks</button>
+[F10:23]|             <button id="overview-tasks" class="clear-tasks" aria-label="Show overview">Overview</button>
+[F10:24]|             <button id="clear-tasks" class="clear-tasks" aria-label="Clear tasks">Clear Tasks</button>
+[F10:25]|           </div>
+[F10:26]|           <div class="tasks-body">
+[F10:27]|             <div id="task-list" class="task-list" aria-live="polite"></div>
+[F10:28]|             <aside id="task-details" class="task-details" aria-label="Active task details">
+[F10:29]|               <div class="task-details-title" id="task-details-step"></div>
+[F10:30]|               <div class="task-details-meta" id="task-details-meta"></div>
+[F10:31]|               <div class="task-details-body md" id="task-details-body"></div>
+[F10:32]|             </aside>
+[F10:33]|           </div>
+[F10:34]|           <div id="task-progress" class="task-progress task-status" aria-live="polite"></div>
+[F10:35]|         </section>
+[F10:36]| 
+[F10:37]|         <section class="chat">
+[F10:38]|           <div class="chat-toolbar">
+[F10:39]|             <button
+[F10:40]|               id="chat-drawer-toggle"
+[F10:41]|               class="chat-drawer-toggle settings-toggle"
+[F10:42]|               aria-label="Toggle chat drawer"
+[F10:43]|               title="Toggle chat"
+[F10:44]|             >
+[F10:45]|               ▼
+[F10:46]|             </button>
+[F10:47]|             <button id="clear-chat" class="clear-chat" aria-label="Clear chat">Clear</button>
+[F10:48]|             <button id="open-settings" class="settings-toggle" aria-label="Open settings">
+[F10:49]|               <span class="settings-icon" aria-hidden="true">&#9881;</span>
+[F10:50]|             </button>
+[F10:51]|           </div>
+[F10:52]|           <div id="chat-messages" class="chat-messages"></div>
+[F10:53]|           <div id="chat-status" class="chat-status"></div>
+[F10:54]|           <div class="chat-input">
+[F10:55]|             <input id="chat-input" type="text" placeholder="Ask about the active task..." />
+[F10:56]|             <button id="send-chat">Send</button>
+[F10:57]|           </div>
+[F10:58]|         </section>
+[F10:59]|       </div>
+[F10:60]| 
+[F10:61]|       <div id="settings-page" class="page hidden" aria-label="Settings">
+[F10:62]|         <header class="settings-header">
+[F10:63]|           <button id="settings-back" class="settings-back" aria-label="Back">Back</button>
+[F10:64]|           <h2>Settings</h2>
+[F10:65]|         </header>
+[F10:66]| 
+[F10:67]|         <section class="settings-section">
+[F10:68]|           <h3>AI API Configs</h3>
+[F10:69]|           <div class="providers-toolbar">
+[F10:70]|             <button id="provider-new" class="provider-new">New</button>
+[F10:71]|           </div>
+[F10:72]|           <div id="providers-list" class="providers-list" aria-live="polite"></div>
+[F10:73]|         </section>
+[F10:74]| 
+[F10:75]|         <section class="settings-section">
+[F10:76]|           <h3>Selected API</h3>
+[F10:77]|           <div class="provider-form">
+[F10:78]|             <label>
+[F10:79]|               Name
+[F10:80]|               <input id="provider-name" type="text" placeholder="My API" />
+[F10:81]|             </label>
+[F10:82]|             <label>
+[F10:83]|               API Key
+[F10:84]|               <input id="provider-key" type="password" placeholder="sk-..." />
+[F10:85]|             </label>
+[F10:86]|             <label>
+[F10:87]|               Base URL
+[F10:88]|               <input id="provider-url" type="text" placeholder="https://api.openai.com" />
+[F10:89]|             </label>
+[F10:90]|             <label>
+[F10:91]|               Model
+[F10:92]|               <input id="provider-model" type="text" placeholder="gpt-4o-mini" />
+[F10:93]|             </label>
+[F10:94]|             <div class="provider-form-actions">
+[F10:95]|               <button id="provider-save" class="provider-save">Save</button>
+[F10:96]|               <button id="provider-delete" class="provider-delete" aria-label="Delete selected API">Delete</button>
+[F10:97]|             </div>
+[F10:98]|           </div>
+[F10:99]|         </section>
+[F10:100]| 
+[F10:101]|         <section class="settings-section">
+[F10:102]|           <h3>Layout</h3>
+[F10:103]|           <label>
+[F10:104]|             Task Layout
+[F10:105]|             <select id="layout-mode" aria-label="Task layout">
+[F10:106]|               <option value="split">Split (list + details)</option>
+[F10:107]|               <option value="inline">Inline (active shows details)</option>
+[F10:108]|               <option value="nano">Nano (prev/current/next)</option>
+[F10:109]|             </select>
+[F10:110]|           </label>
+[F10:111]|         </section>
+[F10:112]|       </div>
+[F10:113]|     </div>
+[F10:114]|     <script src="marked.min.js"></script>
+[F10:115]|     <script src="script.js"></script>
+[F10:116]|   </body>
+[F10:117]| </html>
+
+================================================================================
+文件路径: styles.css(F11) (约合大小: 10 KB)
+================================================================================
+[F11:1]| :root {
+[F11:2]|   color-scheme: dark;
+[F11:3]|   --bg: #1e1e1e;
+[F11:4]|   --panel: #252526;
+[F11:5]|   --border: #333333;
+[F11:6]|   --text: #e5e7eb;
+[F11:7]|   --muted: #9ca3af;
+[F11:8]|   --accent: #3b82f6;
+[F11:9]|   --accent-soft: rgba(59, 130, 246, 0.15);
+[F11:10]|   --done: #10b981;
+[F11:11]| }
+[F11:12]| 
+[F11:13]| * {
+[F11:14]|   box-sizing: border-box;
+[F11:15]| }
+[F11:16]| 
+[F11:17]| body {
+[F11:18]|   margin: 0;
+[F11:19]|   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+[F11:20]|   background: var(--bg);
+[F11:21]|   color: var(--text);
+[F11:22]|   height: 100vh;
+[F11:23]| }
+[F11:24]| 
+[F11:25]| .app {
+[F11:26]|   display: flex;
+[F11:27]|   flex-direction: column;
+[F11:28]|   height: 100vh;
+[F11:29]| }
+[F11:30]| 
+[F11:31]| .page {
+[F11:32]|   flex: 1;
+[F11:33]|   display: flex;
+[F11:34]|   flex-direction: column;
+[F11:35]|   height: 100%;
+[F11:36]| }
+[F11:37]| 
+[F11:38]| .hidden {
+[F11:39]|   display: none;
+[F11:40]| }
+[F11:41]| 
+[F11:42]| .tasks {
+[F11:43]|   flex: 6;
+[F11:44]|   display: flex;
+[F11:45]|   flex-direction: column;
+[F11:46]|   gap: 12px;
+[F11:47]|   padding: 16px;
+[F11:48]|   border-bottom: 1px solid var(--border);
+[F11:49]|   overflow: hidden;
+[F11:50]| }
+[F11:51]| 
+[F11:52]| .panel-header h1 {
+[F11:53]|   margin: 0;
+[F11:54]|   font-size: 20px;
+[F11:55]| }
+[F11:56]| 
+[F11:57]| .panel-header p {
+[F11:58]|   margin: 4px 0 0;
+[F11:59]|   color: var(--muted);
+[F11:60]|   font-size: 12px;
+[F11:61]| }
+[F11:62]| 
+[F11:63]| .doc-title {
+[F11:64]|   min-height: 14px;
+[F11:65]| }
+[F11:66]| 
+[F11:67]| .ingest {
+[F11:68]|   display: flex;
+[F11:69]|   gap: 8px;
+[F11:70]| }
+[F11:71]| 
+[F11:72]| .ingest button {
+[F11:73]|   padding: 6px 10px;
+[F11:74]|   font-size: 12px;
+[F11:75]| }
+[F11:76]| 
+[F11:77]| #overview-tasks {
+[F11:78]|   display: none;
+[F11:79]| }
+[F11:80]| 
+[F11:81]| .layout-nano #overview-tasks {
+[F11:82]|   display: inline-flex;
+[F11:83]| }
+[F11:84]| 
+[F11:85]| #task-input {
+[F11:86]|   flex: 1;
+[F11:87]|   min-height: 68px;
+[F11:88]|   background: var(--panel);
+[F11:89]|   border: 1px solid var(--border);
+[F11:90]|   color: var(--text);
+[F11:91]|   padding: 8px;
+[F11:92]|   border-radius: 8px;
+[F11:93]|   resize: vertical;
+[F11:94]| }
+[F11:95]| 
+[F11:96]| button {
+[F11:97]|   background: var(--accent);
+[F11:98]|   border: none;
+[F11:99]|   color: white;
+[F11:100]|   padding: 8px 12px;
+[F11:101]|   border-radius: 8px;
+[F11:102]|   cursor: pointer;
+[F11:103]|   font-weight: 600;
+[F11:104]| }
+[F11:105]| 
+[F11:106]| button:hover {
+[F11:107]|   background: #2563eb;
+[F11:108]| }
+[F11:109]| 
+[F11:110]| .clear-tasks {
+[F11:111]|   background: transparent;
+[F11:112]|   border: 1px solid var(--border);
+[F11:113]|   color: var(--muted);
+[F11:114]| }
+[F11:115]| 
+[F11:116]| .clear-tasks:hover {
+[F11:117]|   background: var(--panel);
+[F11:118]|   color: var(--text);
+[F11:119]| }
+[F11:120]| 
+[F11:121]| .task-list {
+[F11:122]|   flex: 1;
+[F11:123]|   overflow-y: auto;
+[F11:124]|   display: flex;
+[F11:125]|   flex-direction: column;
+[F11:126]|   gap: 8px;
+[F11:127]|   padding-right: 4px;
+[F11:128]| }
+[F11:129]| 
+[F11:130]| .tasks-body {
+[F11:131]|   flex: 1;
+[F11:132]|   display: flex;
+[F11:133]|   gap: 12px;
+[F11:134]|   overflow: hidden;
+[F11:135]| }
+[F11:136]| 
+[F11:137]| .task-details {
+[F11:138]|   flex: 1;
+[F11:139]|   border: 1px solid var(--border);
+[F11:140]|   background: var(--panel);
+[F11:141]|   border-radius: 10px;
+[F11:142]|   padding: 10px 12px;
+[F11:143]|   overflow-y: auto;
+[F11:144]|   display: flex;
+[F11:145]|   flex-direction: column;
+[F11:146]|   gap: 8px;
+[F11:147]| }
+[F11:148]| 
+[F11:149]| .task-details-title {
+[F11:150]|   font-weight: 700;
+[F11:151]| }
+[F11:152]| 
+[F11:153]| .task-details-meta {
+[F11:154]|   font-size: 12px;
+[F11:155]|   color: var(--muted);
+[F11:156]| }
+[F11:157]| 
+[F11:158]| .task-details-body {
+[F11:159]|   font-size: 12px;
+[F11:160]|   line-height: 1.4;
+[F11:161]| }
+[F11:162]| 
+[F11:163]| .task-item-row {
+[F11:164]|   display: flex;
+[F11:165]|   justify-content: space-between;
+[F11:166]|   align-items: center;
+[F11:167]|   gap: 10px;
+[F11:168]| }
+[F11:169]| 
+[F11:170]| .task-item.with-details {
+[F11:171]|   flex-direction: column;
+[F11:172]|   align-items: stretch;
+[F11:173]|   gap: 8px;
+[F11:174]| }
+[F11:175]| 
+[F11:176]| .task-inline-meta {
+[F11:177]|   font-size: 12px;
+[F11:178]|   color: var(--muted);
+[F11:179]| }
+[F11:180]| 
+[F11:181]| .task-inline-details {
+[F11:182]|   font-size: 12px;
+[F11:183]|   line-height: 1.4;
+[F11:184]| }
+[F11:185]| 
+[F11:186]| .layout-inline .task-details {
+[F11:187]|   display: none;
+[F11:188]| }
+[F11:189]| 
+[F11:190]| .layout-nano .task-details {
+[F11:191]|   display: none;
+[F11:192]| }
+[F11:193]| 
+[F11:194]| .task-item {
+[F11:195]|   border: 1px solid var(--border);
+[F11:196]|   background: var(--panel);
+[F11:197]|   padding: 10px 12px;
+[F11:198]|   border-radius: 10px;
+[F11:199]|   display: flex;
+[F11:200]|   justify-content: space-between;
+[F11:201]|   align-items: center;
+[F11:202]|   cursor: pointer;
+[F11:203]|   transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease,
+[F11:204]|     transform 0.25s ease, opacity 0.25s ease;
+[F11:205]| }
+[F11:206]| 
+[F11:207]| .task-item.active {
+[F11:208]|   border-color: var(--accent);
+[F11:209]|   background: var(--accent-soft);
+[F11:210]|   border-left: 4px solid var(--accent);
+[F11:211]|   box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.15);
+[F11:212]|   animation: task-breathe 2.4s ease-in-out infinite;
+[F11:213]| }
+[F11:214]| 
+[F11:215]| @keyframes task-breathe {
+[F11:216]|   0% {
+[F11:217]|     box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.10);
+[F11:218]|     transform: translateY(0);
+[F11:219]|   }
+[F11:220]|   50% {
+[F11:221]|     box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.22);
+[F11:222]|     transform: translateY(-1px);
+[F11:223]|   }
+[F11:224]|   100% {
+[F11:225]|     box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.10);
+[F11:226]|     transform: translateY(0);
+[F11:227]|   }
+[F11:228]| }
+[F11:229]| 
+[F11:230]| @media (prefers-reduced-motion: reduce) {
+[F11:231]|   .task-item {
+[F11:232]|     transition: none;
+[F11:233]|   }
+[F11:234]| 
+[F11:235]|   .task-item.active {
+[F11:236]|     animation: none;
+[F11:237]|     transform: none;
+[F11:238]|   }
+[F11:239]| }
+[F11:240]| 
+[F11:241]| .nano-view .task-item.nano-secondary {
+[F11:242]|   opacity: 0.4;
+[F11:243]|   padding-top: 8px;
+[F11:244]|   padding-bottom: 8px;
+[F11:245]| }
+[F11:246]| 
+[F11:247]| .task-item.done {
+[F11:248]|   opacity: 0.6;
+[F11:249]|   text-decoration: line-through;
+[F11:250]| }
+[F11:251]| 
+[F11:252]| .task-status {
+[F11:253]|   font-size: 12px;
+[F11:254]|   color: var(--muted);
+[F11:255]| }
+[F11:256]| 
+[F11:257]| .task-progress {
+[F11:258]|   text-align: right;
+[F11:259]|   padding-top: 2px;
+[F11:260]| }
+[F11:261]| 
+[F11:262]| .chat {
+[F11:263]|   flex: 4;
+[F11:264]|   display: flex;
+[F11:265]|   flex-direction: column;
+[F11:266]|   gap: 10px;
+[F11:267]|   padding: 16px;
+[F11:268]|   overflow: hidden;
+[F11:269]| }
+[F11:270]| 
+[F11:271]| body.chat-collapsed .chat {
+[F11:272]|   flex: 0 0 auto;
+[F11:273]|   max-height: 44px;
+[F11:274]|   padding-top: 10px;
+[F11:275]|   padding-bottom: 10px;
+[F11:276]| }
+[F11:277]| 
+[F11:278]| body.chat-collapsed .chat-messages,
+[F11:279]| body.chat-collapsed .chat-status,
+[F11:280]| body.chat-collapsed .chat-input {
+[F11:281]|   display: none;
+[F11:282]| }
+[F11:283]| 
+[F11:284]| .chat-toolbar {
+[F11:285]|   display: flex;
+[F11:286]|   justify-content: flex-end;
+[F11:287]|   gap: 8px;
+[F11:288]| }
+[F11:289]| 
+[F11:290]| .clear-chat {
+[F11:291]|   background: transparent;
+[F11:292]|   border: 1px solid var(--border);
+[F11:293]|   color: var(--muted);
+[F11:294]|   padding: 6px 10px;
+[F11:295]|   border-radius: 8px;
+[F11:296]|   cursor: pointer;
+[F11:297]|   font-weight: 600;
+[F11:298]| }
+[F11:299]| 
+[F11:300]| .clear-chat:hover {
+[F11:301]|   background: var(--panel);
+[F11:302]|   color: var(--text);
+[F11:303]| }
+[F11:304]| 
+[F11:305]| .settings-toggle {
+[F11:306]|   background: transparent;
+[F11:307]|   border: 1px solid var(--border);
+[F11:308]|   color: var(--muted);
+[F11:309]|   padding: 6px 8px;
+[F11:310]|   border-radius: 8px;
+[F11:311]|   cursor: pointer;
+[F11:312]| }
+[F11:313]| 
+[F11:314]| .settings-icon {
+[F11:315]|   font-size: 16px;
+[F11:316]|   line-height: 1;
+[F11:317]| }
+[F11:318]| 
+[F11:319]| .settings-toggle:hover {
+[F11:320]|   background: var(--panel);
+[F11:321]|   color: var(--text);
+[F11:322]| }
+[F11:323]| 
+[F11:324]| .settings-header {
+[F11:325]|   display: flex;
+[F11:326]|   align-items: center;
+[F11:327]|   gap: 10px;
+[F11:328]|   padding: 16px;
+[F11:329]|   border-bottom: 1px solid var(--border);
+[F11:330]| }
+[F11:331]| 
+[F11:332]| .settings-header h2 {
+[F11:333]|   margin: 0;
+[F11:334]|   font-size: 16px;
+[F11:335]| }
+[F11:336]| 
+[F11:337]| .settings-back {
+[F11:338]|   background: transparent;
+[F11:339]|   border: 1px solid var(--border);
+[F11:340]|   color: var(--muted);
+[F11:341]|   padding: 6px 10px;
+[F11:342]|   border-radius: 8px;
+[F11:343]|   cursor: pointer;
+[F11:344]|   font-weight: 600;
+[F11:345]| }
+[F11:346]| 
+[F11:347]| .settings-back:hover {
+[F11:348]|   background: var(--panel);
+[F11:349]|   color: var(--text);
+[F11:350]| }
+[F11:351]| 
+[F11:352]| .settings-section {
+[F11:353]|   padding: 16px;
+[F11:354]|   display: flex;
+[F11:355]|   flex-direction: column;
+[F11:356]|   gap: 10px;
+[F11:357]| }
+[F11:358]| 
+[F11:359]| .settings-section h3 {
+[F11:360]|   margin: 0;
+[F11:361]|   font-size: 13px;
+[F11:362]|   color: var(--muted);
+[F11:363]|   text-transform: uppercase;
+[F11:364]|   letter-spacing: 0.04em;
+[F11:365]| }
+[F11:366]| 
+[F11:367]| .providers-toolbar {
+[F11:368]|   display: flex;
+[F11:369]|   justify-content: flex-end;
+[F11:370]| }
+[F11:371]| 
+[F11:372]| .providers-list {
+[F11:373]|   display: flex;
+[F11:374]|   flex-direction: column;
+[F11:375]|   gap: 8px;
+[F11:376]| }
+[F11:377]| 
+[F11:378]| .provider-row {
+[F11:379]|   border: 1px solid var(--border);
+[F11:380]|   background: var(--panel);
+[F11:381]|   border-radius: 10px;
+[F11:382]|   padding: 10px 12px;
+[F11:383]|   cursor: pointer;
+[F11:384]|   display: flex;
+[F11:385]|   justify-content: space-between;
+[F11:386]|   align-items: center;
+[F11:387]|   gap: 12px;
+[F11:388]| }
+[F11:389]| 
+[F11:390]| .provider-row.active {
+[F11:391]|   border-color: var(--accent);
+[F11:392]|   background: var(--accent-soft);
+[F11:393]| }
+[F11:394]| 
+[F11:395]| .provider-row-main {
+[F11:396]|   display: flex;
+[F11:397]|   flex-direction: column;
+[F11:398]|   gap: 2px;
+[F11:399]|   min-width: 0;
+[F11:400]| }
+[F11:401]| 
+[F11:402]| .provider-row-name {
+[F11:403]|   font-weight: 700;
+[F11:404]|   white-space: nowrap;
+[F11:405]|   overflow: hidden;
+[F11:406]|   text-overflow: ellipsis;
+[F11:407]| }
+[F11:408]| 
+[F11:409]| .provider-row-meta {
+[F11:410]|   font-size: 12px;
+[F11:411]|   color: var(--muted);
+[F11:412]|   white-space: nowrap;
+[F11:413]|   overflow: hidden;
+[F11:414]|   text-overflow: ellipsis;
+[F11:415]| }
+[F11:416]| 
+[F11:417]| .provider-row-badge {
+[F11:418]|   font-size: 12px;
+[F11:419]|   color: var(--muted);
+[F11:420]|   border: 1px solid var(--border);
+[F11:421]|   padding: 4px 8px;
+[F11:422]|   border-radius: 999px;
+[F11:423]| }
+[F11:424]| 
+[F11:425]| .provider-form {
+[F11:426]|   display: flex;
+[F11:427]|   flex-direction: column;
+[F11:428]|   gap: 10px;
+[F11:429]| }
+[F11:430]| 
+[F11:431]| .provider-form label,
+[F11:432]| .settings-section label {
+[F11:433]|   font-size: 12px;
+[F11:434]|   display: flex;
+[F11:435]|   flex-direction: column;
+[F11:436]|   gap: 4px;
+[F11:437]| }
+[F11:438]| 
+[F11:439]| .provider-form input,
+[F11:440]| .provider-form select,
+[F11:441]| .settings-section select {
+[F11:442]|   background: var(--panel);
+[F11:443]|   border: 1px solid var(--border);
+[F11:444]|   color: var(--text);
+[F11:445]|   padding: 8px;
+[F11:446]|   border-radius: 8px;
+[F11:447]| }
+[F11:448]| 
+[F11:449]| .provider-form-actions {
+[F11:450]|   display: flex;
+[F11:451]|   gap: 8px;
+[F11:452]|   justify-content: flex-end;
+[F11:453]| }
+[F11:454]| 
+[F11:455]| .provider-delete {
+[F11:456]|   background: transparent;
+[F11:457]|   border: 1px solid var(--border);
+[F11:458]|   color: var(--muted);
+[F11:459]| }
+[F11:460]| 
+[F11:461]| .provider-delete:hover {
+[F11:462]|   background: var(--panel);
+[F11:463]|   color: var(--text);
+[F11:464]| }
+[F11:465]| 
+[F11:466]| .settings {
+[F11:467]|   display: none;
+[F11:468]|   flex-direction: column;
+[F11:469]|   gap: 12px;
+[F11:470]|   background: var(--bg);
+[F11:471]|   padding: 12px;
+[F11:472]|   border: 1px solid var(--border);
+[F11:473]|   border-radius: 8px;
+[F11:474]| }
+[F11:475]| 
+[F11:476]| .settings.visible {
+[F11:477]|   display: flex;
+[F11:478]| }
+[F11:479]| 
+[F11:480]| .provider-manager {
+[F11:481]|   display: flex;
+[F11:482]|   gap: 6px;
+[F11:483]| }
+[F11:484]| 
+[F11:485]| .provider-manager select {
+[F11:486]|   flex: 1;
+[F11:487]|   background: var(--panel);
+[F11:488]|   border: 1px solid var(--border);
+[F11:489]|   color: var(--text);
+[F11:490]|   padding: 6px 8px;
+[F11:491]|   border-radius: 8px;
+[F11:492]| }
+[F11:493]| 
+[F11:494]| .provider-action {
+[F11:495]|   background: transparent;
+[F11:496]|   border: 1px solid var(--border);
+[F11:497]|   color: var(--muted);
+[F11:498]|   padding: 6px 10px;
+[F11:499]|   border-radius: 8px;
+[F11:500]|   cursor: pointer;
+[F11:501]|   font-weight: 600;
+[F11:502]| }
+[F11:503]| 
+[F11:504]| .provider-action:hover {
+[F11:505]|   background: var(--panel);
+[F11:506]|   color: var(--text);
+[F11:507]| }
+[F11:508]| 
+[F11:509]| .settings label {
+[F11:510]|   font-size: 12px;
+[F11:511]|   display: flex;
+[F11:512]|   flex-direction: column;
+[F11:513]|   gap: 4px;
+[F11:514]| }
+[F11:515]| 
+[F11:516]| .settings input {
+[F11:517]|   background: var(--panel);
+[F11:518]|   border: 1px solid var(--border);
+[F11:519]|   color: var(--text);
+[F11:520]|   padding: 6px 8px;
+[F11:521]|   border-radius: 8px;
+[F11:522]| }
+[F11:523]| 
+[F11:524]| .chat-messages {
+[F11:525]|   flex: 1;
+[F11:526]|   overflow-y: auto;
+[F11:527]|   background: var(--panel);
+[F11:528]|   border: 1px solid var(--border);
+[F11:529]|   padding: 10px;
+[F11:530]|   border-radius: 10px;
+[F11:531]|   display: flex;
+[F11:532]|   flex-direction: column;
+[F11:533]|   gap: 8px;
+[F11:534]| }
+[F11:535]| 
+[F11:536]| .chat-bubble {
+[F11:537]|   padding: 8px 10px;
+[F11:538]|   border-radius: 10px;
+[F11:539]|   max-width: 90%;
+[F11:540]|   line-height: 1.4;
+[F11:541]|   font-family: inherit;
+[F11:542]| }
+[F11:543]| 
+[F11:544]| .md {
+[F11:545]|   white-space: normal;
+[F11:546]|   overflow-wrap: anywhere;
+[F11:547]| }
+[F11:548]| 
+[F11:549]| .md p {
+[F11:550]|   margin: 0 0 8px;
+[F11:551]| }
+[F11:552]| 
+[F11:553]| .md p:last-child {
+[F11:554]|   margin-bottom: 0;
+[F11:555]| }
+[F11:556]| 
+[F11:557]| .md ul,
+[F11:558]| .md ol {
+[F11:559]|   margin: 8px 0;
+[F11:560]|   padding-left: 20px;
+[F11:561]| }
+[F11:562]| 
+[F11:563]| .md li {
+[F11:564]|   margin: 2px 0;
+[F11:565]| }
+[F11:566]| 
+[F11:567]| .md pre {
+[F11:568]|   margin: 8px 0;
+[F11:569]|   padding: 10px 12px;
+[F11:570]|   background: #111827;
+[F11:571]|   border: 1px solid var(--border);
+[F11:572]|   border-radius: 10px;
+[F11:573]|   overflow-x: auto;
+[F11:574]| }
+[F11:575]| 
+[F11:576]| .md code {
+[F11:577]|   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+[F11:578]|     monospace;
+[F11:579]|   font-size: 11px;
+[F11:580]| }
+[F11:581]| 
+[F11:582]| .md :not(pre) > code {
+[F11:583]|   padding: 1px 6px;
+[F11:584]|   border-radius: 8px;
+[F11:585]|   border: 1px solid var(--border);
+[F11:586]|   background: var(--bg);
+[F11:587]| }
+[F11:588]| 
+[F11:589]| .md a {
+[F11:590]|   color: var(--accent);
+[F11:591]|   text-decoration: none;
+[F11:592]| }
+[F11:593]| 
+[F11:594]| .md a:hover {
+[F11:595]|   text-decoration: underline;
+[F11:596]| }
+[F11:597]| 
+[F11:598]| .md h1,
+[F11:599]| .md h2,
+[F11:600]| .md h3,
+[F11:601]| .md h4,
+[F11:602]| .md h5,
+[F11:603]| .md h6 {
+[F11:604]|   margin: 10px 0 6px;
+[F11:605]|   font-size: 12px;
+[F11:606]| }
+[F11:607]| 
+[F11:608]| .chat-bubble.user {
+[F11:609]|   align-self: flex-end;
+[F11:610]|   background: var(--accent);
+[F11:611]|   color: white;
+[F11:612]| }
+[F11:613]| 
+[F11:614]| .chat-bubble.assistant {
+[F11:615]|   align-self: flex-start;
+[F11:616]|   background: #111827;
+[F11:617]|   color: var(--text);
+[F11:618]| }
+[F11:619]| 
+[F11:620]| .chat-bubble.system {
+[F11:621]|   align-self: center;
+[F11:622]|   background: transparent;
+[F11:623]|   color: var(--muted);
+[F11:624]|   font-size: 12px;
+[F11:625]| }
+[F11:626]| 
+[F11:627]| .chat-status {
+[F11:628]|   min-height: 18px;
+[F11:629]|   font-size: 12px;
+[F11:630]|   color: var(--muted);
+[F11:631]| }
+[F11:632]| 
+[F11:633]| .chat-input {
+[F11:634]|   display: flex;
+[F11:635]|   gap: 8px;
+[F11:636]| }
+[F11:637]| 
+[F11:638]| #chat-input {
+[F11:639]|   flex: 1;
+[F11:640]|   background: var(--panel);
+[F11:641]|   border: 1px solid var(--border);
+[F11:642]|   color: var(--text);
+[F11:643]|   padding: 8px 10px;
+[F11:644]|   border-radius: 10px;
+[F11:645]| }
 
 --------------------------------------------------------------------------------
-文件路径: system_prompt.txt(F9) (约合大小: 0 KB)
+文件路径: system_prompt.txt(F12) (约合大小: 0 KB)
 --------------------------------------------------------------------------------
-[F9:1]| You are Rail, a developer's Execution GPS.
-[F9:2]| 
-[F9:3]| [MACRO GOAL / PROGRESS]
-[F9:4]| Total tasks in project: {TOTAL_TASKS}
-[F9:5]| Completed: {DONE_TASKS}/{TOTAL_TASKS}
-[F9:6]| 
-[F9:7]| [NEXT STEPS IN PIPELINE]
-[F9:8]| {PENDING_TASKS}
-[F9:9]| 
-[F9:10]| [CURRENT FOCUS (CRITICAL)]
-[F9:11]| The user is currently working on: "{ACTIVE_TASK}"
-[F9:12]| 
-[F9:13]| [INSTRUCTION]
-[F9:14]| 1. Your answers MUST align with the Current Focus.
-[F9:15]| 2. Use the Macro Goal and Next Steps only as background context to ensure consistency.
-[F9:16]| 3. Be a minimalist. Give high-density, low-fluff code.
-
-================================================================================
-文件路径: test.md(F10) (约合大小: 2 KB)
-================================================================================
-[F10:1]| 
-[F10:2]| ### 1. 部署到 Chrome 侧边栏 (首选验证方式)
-[F10:3]| 
-[F10:4]| 1.  **修正加载路径**：
-[F10:5]|     在您的 `README.md` `[F4:19]` 中写的是“选择 `github` 文件夹”，但在当前的源码结构中，`manifest.json` `[F1]` 位于**根目录**。
-[F10:6]|     *   **操作**：在 `chrome://extensions/` 点击“加载已解压的扩展程序”时，请选择**整个项目所在的根文件夹**。
-[F10:7]| 2.  **唤起侧边栏**：
-[F10:8]|     *   点击 Chrome 右上角的“扩展程序”图标（拼图形状）。
-[F10:9]|     *   找到 **Rail** 并点击。如果它没直接打开侧边栏，请查看地址栏右侧是否有 Rail 的小图标，点击它。
-[F10:10]| 
-[F10:11]| ---
-[F10:12]| 
-[F10:13]| ### 2. 基础功能验收清单 (3 分钟)
-[F10:14]| 
-[F10:15]| 请按以下顺序操作，验证 `script.js` `[F5]` 的核心逻辑：
-[F10:16]| 
-[F10:17]| *   **[ ] 任务录入 (Ingestion)**：
-[F10:18]|     在输入框粘贴以下内容并点击 **Add Tasks**：
-[F10:19]|     ```text
-[F10:20]|     - [ ] 验证 API 连接性
-[F10:21]|     1. 测试任务切换逻辑
-[F10:22]|     * 检查本地存储是否持久化
-[F10:23]|     ```
-[F10:24]|     *验证点*：`[F5:165-168]` 的正则逻辑应自动删掉前缀，列表里只显示“验证 API 连接性”等干净的文本。
-[F10:25]| 
-[F10:26]| *   **[ ] 状态切换 (Task Toggle)**：
-[F10:27]|     点击第一个任务。
-[F10:28]|     *验证点*：该任务应变为“蓝色高亮”（Active）`[F8:102]`。再次点击，它应变灰并带中划线（Done）`[F8:107]`。
-[F10:29]| 
-[F10:30]| *   **[ ] 配置保存 (Settings)**：
-[F10:31]|     点击右上角齿轮 `9ed`，输入 API Key、Base URL 和 Model，点击 **Save Settings**。
-[F10:32]|     *验证点*：刷新页面，配置信息应该依然存在（`localStorage` 持久化验证 `[F5:188]`）。
-[F10:33]| 
-[F10:34]| *   **[ ] 基础对话 (Chat)**：
-[F10:35]|     选中一个任务，在对话框输入 `你好，该任务的重点是什么？`。
-[F10:36]|     *验证点*：
-[F10:37]|     1. 状态栏显示 `Thinking...` `[F5:290]`。
-[F10:38]|     2. API 返回结果。
-[F10:39]|     3. AI 的回复中，代码部分应能正常换行（CSS `pre-wrap` 验证 `[F8:209]`）。
-[F10:40]| 
-[F10:41]| ---
-[F10:42]| 
-[F10:43]| ### 3. 给您的调试小贴士
-[F10:44]| 
-[F10:45]| 由于扩展程序的侧边栏调试稍微隐蔽一点：
-[F10:46]| 1.  在侧边栏的空白处**右键 -> 检查 (Inspect)**。
-[F10:47]| 2.  这会打开侧边栏专属的开发者工具。
-[F10:48]| 3.  在 **Console** 面板，您可以看到 `script.js` 发出的所有错误。如果 API 调用失败，报错信息会在这里显示（例如 `401 Unauthorized` 或网络跨域问题）。
-
-================================================================================
-文件路径: todo.md(F11) (约合大小: 0 KB)
-================================================================================
-[F11:1]| # Rail 迭代计划 (Current Focus)
-[F11:2]| 
-[F11:3]| ## 1. 增强型 System Prompt 落地
-[F11:4]| - [ ] 将 `system_prompt.txt` 更新为“执行 GPS”模式，强化对当前任务的约束。
-[F11:5]| - [ ] 在 Prompt 中加入“下一步影响分析”指令。
-[F11:6]| 
-[F11:7]| ## 2. 结构化任务拆解 (Structural Decomposition)
-[F11:8]| - [ ] **UI 增强**：在每个 `.task-item` 中增加一个“拆解”图标/按钮。
-[F11:9]| - [ ] **拆解逻辑**：
-[F11:10]| 	- 点击拆解时，将该任务文本作为 `user` 消息，并配合特定的 `decomposition_prompt` 调用 API。
-[F11:11]| 	- AI 返回子任务列表（JSON 或换行文本）。
-[F11:12]| 	- 自动调用 `ingestTasks()` 将子任务插入当前任务下方。
-[F11:13]| 
-[F11:14]| ## 3. 部署与环境同步
-[F11:15]| - [ ] 确保 `manifest.json` 与 `manifest.webmanifest` 的版本号同步。
-[F11:16]| - [ ] 验证 Service Worker 在非 localhost 环境下的 HTTPS 限制。
-
-================================================================================
-文件路径: github\copilotrule.md(F12) (约合大小: 2 KB)
-================================================================================
-[F12:1]| # Project Rail - AI Instructions
+[F12:1]| You are Rail, a developer's Execution GPS.
 [F12:2]| 
-[F12:3]| ## 1. Project Identity
-[F12:4]| You are the lead developer for "Rail", a Chrome Extension designed to be a "Context Anchor" and "Execution GPS" for developers.
-[F12:5]| - **Core Philosophy**: Minimalist, Dark Mode, Local-First, One-Time Use (Disposable).
-[F12:6]| - **Tech Stack**: Vanilla JS (ES6+), HTML5, CSS3 (Flexbox), Chrome Extension Manifest V3. No React/Vue/Bundlers for the MVP.
-[F12:7]| 
-[F12:8]| ## 2. Architecture & Files
-[F12:9]| - **manifest.json**: Needs `sidePanel`, `activeTab`, `scripting`, `storage` permissions.
-[F12:10]| - **sidepanel.html**: The main UI.
-[F12:11]|   - Top 60%: Task List (Scrollable).
-[F12:12]|   - Bottom 40%: Chat Interface (Fixed).
-[F12:13]| - **styles.css**: VS Code-like Dark Mode theme. Colors: Bg `#1e1e1e`, Accent `#3b82f6`.
-[F12:14]| - **script.js**: Contains all logic for DOM manipulation, LocalStorage, and API calls.
-[F12:15]| 
-[F12:16]| ## 3. Core Features (The "Must-Haves")
-[F12:17]| ### A. Task List Logic
-[F12:18]| - **Data Structure**: Array of objects `{ id, text, status: 'pending'|'done', context_payload: {} }`.
-[F12:19]| - **Interaction**: Click to toggle done/active.
-[F12:20]| - **Smart Ingestion**: 
-[F12:21]|   - Allow users to paste raw text.
-[F12:22]|   - **Rule**: If raw text is pasted, simply split by newlines for the MVP (or call LLM if API key is present).
-[F12:23]| 
-[F12:24]| ### B. Chat & Context (BYOK)
-[F12:25]| - **Settings**: Store OpenAI API Key & Base URL in `localStorage`.
-[F12:26]| - **Context Injection**: When user asks a question in the chat input:
-[F12:27]|   1. Grab the currently **Active** task text.
-[F12:28]|   2. Grab the User's question.
-[F12:29]|   3. Construct System Prompt: "You are an execution assistant. Context Task: [Active Task]..."
-[F12:30]|   4. Call API (`POST /v1/chat/completions`).
-[F12:31]| 
-[F12:32]| ## 4. Coding Standards (Strict)
-[F12:33]| - **Error Handling**: Always check if API Key exists before calling API. Alert user if missing.
-[F12:34]| - **UI Feedback**: Show a loading spinner or text when waiting for API response.
-[F12:35]| - **Clean Code**: Keep logic in `script.js`. Use readable variable names. Comments are required for complex logic.
-[F12:36]| 
-[F12:37]| ## 5. Tone & Style
-[F12:38]| - Be concise.
-[F12:39]| - Focus on shipping working code.
-[F12:40]| - If I ask for a feature, implement it directly in the existing file structure.
+[F12:3]| [MACRO GOAL / PROGRESS]
+[F12:4]| Total tasks in project: {TOTAL_TASKS}
+[F12:5]| Completed: {DONE_TASKS}/{TOTAL_TASKS}
+[F12:6]| 
+[F12:7]| [NEXT STEPS IN PIPELINE]
+[F12:8]| {PENDING_TASKS}
+[F12:9]| 
+[F12:10]| [CURRENT FOCUS (CRITICAL)]
+[F12:11]| The user is currently working on: "{ACTIVE_TASK}"
+[F12:12]| Task details (Markdown):
+[F12:13]| {TASK_DETAILS}
+[F12:14]| 
+[F12:15]| [INSTRUCTION]
+[F12:16]| 1. Your answers MUST align with the Current Focus.
+[F12:17]| 2. Use the Macro Goal and Next Steps only as background context to ensure consistency.
+[F12:18]| 3. Be a minimalist. Give high-density, low-fluff code.
+[F12:19]| 
+[F12:20]| [MARKDOWN]
+[F12:21]| If you output task `details`, you MAY use Markdown, but NEVER use `###` headings inside details (it conflicts with the user's task-ingestion format).
+[F12:22]| If you need headings inside details, use `####` or deeper.
+
+================================================================================
+文件路径: task_ingest_test_cases.md(F13) (约合大小: 1 KB)
+================================================================================
+[F13:1]| # Demo Project
+[F13:2]| ## Phase A
+[F13:3]| 
+[F13:4]| ### Implement parser
+[F13:5]|   Accept only ### headings as steps.
+[F13:6]|   Indented lines become details.
+[F13:7]| 
+[F13:8]| ### Update docs
+[F13:9]|   Mention the format in README.
+[F13:10]| 
+[F13:11]| # Markdown Rendering (Details)
+[F13:12]| ## Notes
+[F13:13]| - Only `###` headings become tasks.
+[F13:14]| - Details lines must be indented.
+[F13:15]| - In details, DO NOT use `###` headings (use `####` or deeper).
+[F13:16]| 
+[F13:17]| ## Rich Markdown in details
+[F13:18]| 
+[F13:19]| ## Expected (visual)
+[F13:20]| - Details panel (Split) and active task body (Inline) should render:
+[F13:21]|   - Bulleted + numbered lists with proper indentation
+[F13:22]|   - Inline code with a subtle pill background
+[F13:23]|   - Fenced code blocks in a dark box with horizontal scroll
+[F13:24]|   - Links in accent color, underlined on hover
+[F13:25]|   - `####` headings as slightly bolder text
+[F13:26]| - Sanitization check:
+[F13:27]|   - No alerts/popups should ever run
+[F13:28]|   - The `javascript:` link should not be clickable/should have its href removed
+[F13:29]|   - The `<script>` tag should not appear as executable content
+[F13:30]| 
+[F13:31]| ### Render lists + inline code
+[F13:32]|   Here is a list:
+[F13:33]|   - item one
+[F13:34]|   - item two with `inline code`
+[F13:35]|   - item three
+[F13:36]|   
+[F13:37]|   And an ordered list:
+[F13:38]|   1. first
+[F13:39]|   2. second
+[F13:40]| 
+[F13:41]| ### Render code blocks
+[F13:42]|   ```js
+[F13:43]|   function hello(name) {
+[F13:44]|     return `hi ${name}`;
+[F13:45]|   }
+[F13:46]|   ```
+[F13:47]|   
+[F13:48]|   Inline: `const x = 1`.
+[F13:49]| 
+[F13:50]| ### Render links + emphasis
+[F13:51]|   Visit [OpenAI](https://openai.com).
+[F13:52]|   
+[F13:53]|   **Bold**, *italic*, and ~~strike~~.
+[F13:54]| 
+[F13:55]| ### Render headings inside details (use ####)
+[F13:56]|   #### Subsection
+[F13:57]|   Some text under a subsection.
+[F13:58]|   
+[F13:59]|   #### Another subsection
+[F13:60]|   - bullet under subsection
+[F13:61]| 
+[F13:62]| ### Sanitization check (HTML should not execute)
+[F13:63]|   This should be removed or neutralized:
+[F13:64]|   <script>alert('xss')</script>
+[F13:65]|   <img src=x onerror=alert('xss')>
+[F13:66]|   <a href="javascript:alert('xss')">bad link</a>
+[F13:67]|   
+[F13:68]|   This should remain as normal Markdown:
+[F13:69]|   - `code`
+[F13:70]|   - [safe link](https://example.com)
+[F13:71]| 
+[F13:72]| # Demo
+[F13:73]| ## Phase A
+[F13:74]| ### Step A1
+[F13:75]|   detail A1
+[F13:76]| ## Phase B
+[F13:77]| ### Step B1
+[F13:78]|   detail B1
+[F13:79]| 
+[F13:80]| # Doc A
+[F13:81]| ### Step 1
+[F13:82]|   a
+[F13:83]| # Doc B
+[F13:84]| ### Step 2
+[F13:85]|   b
+
+================================================================================
+文件路径: test.md(F14) (约合大小: 2 KB)
+================================================================================
+[F14:1]| 
+[F14:2]| ### 1. 部署到 Chrome 侧边栏 (首选验证方式)
+[F14:3]| 
+[F14:4]| 1.  **修正加载路径**：
+[F14:5]|     在您的 `README.md` `[F4:19]` 中写的是“选择 `github` 文件夹”，但在当前的源码结构中，`manifest.json` `[F1]` 位于**根目录**。
+[F14:6]|     *   **操作**：在 `chrome://extensions/` 点击“加载已解压的扩展程序”时，请选择**整个项目所在的根文件夹**。
+[F14:7]| 2.  **唤起侧边栏**：
+[F14:8]|     *   点击 Chrome 右上角的“扩展程序”图标（拼图形状）。
+[F14:9]|     *   找到 **Rail** 并点击。如果它没直接打开侧边栏，请查看地址栏右侧是否有 Rail 的小图标，点击它。
+[F14:10]| 
+[F14:11]| ---
+[F14:12]| 
+[F14:13]| ### 2. 基础功能验收清单 (3 分钟)
+[F14:14]| 
+[F14:15]| 请按以下顺序操作，验证 `script.js` `[F5]` 的核心逻辑：
+[F14:16]| 
+[F14:17]| *   **[ ] 任务录入 (Ingestion)**：
+[F14:18]|     在输入框粘贴以下内容并点击 **Add Tasks**：
+[F14:19]|     ```text
+[F14:20]|     - [ ] 验证 API 连接性
+[F14:21]|     1. 测试任务切换逻辑
+[F14:22]|     * 检查本地存储是否持久化
+[F14:23]|     ```
+[F14:24]|     *验证点*：`[F5:165-168]` 的正则逻辑应自动删掉前缀，列表里只显示“验证 API 连接性”等干净的文本。
+[F14:25]| 
+[F14:26]| *   **[ ] 状态切换 (Task Toggle)**：
+[F14:27]|     点击第一个任务。
+[F14:28]|     *验证点*：该任务应变为“蓝色高亮”（Active）`[F8:102]`。再次点击，它应变灰并带中划线（Done）`[F8:107]`。
+[F14:29]| 
+[F14:30]| *   **[ ] 配置保存 (Settings)**：
+[F14:31]|     点击右上角齿轮 `9ed`，输入 API Key、Base URL 和 Model，点击 **Save Settings**。
+[F14:32]|     *验证点*：刷新页面，配置信息应该依然存在（`localStorage` 持久化验证 `[F5:188]`）。
+[F14:33]| 
+[F14:34]| *   **[ ] 基础对话 (Chat)**：
+[F14:35]|     选中一个任务，在对话框输入 `你好，该任务的重点是什么？`。
+[F14:36]|     *验证点*：
+[F14:37]|     1. 状态栏显示 `Thinking...` `[F5:290]`。
+[F14:38]|     2. API 返回结果。
+[F14:39]|     3. AI 的回复中，代码部分应能正常换行（CSS `pre-wrap` 验证 `[F8:209]`）。
+[F14:40]| 
+[F14:41]| ---
+[F14:42]| 
+[F14:43]| ### 3. 给您的调试小贴士
+[F14:44]| 
+[F14:45]| 由于扩展程序的侧边栏调试稍微隐蔽一点：
+[F14:46]| 1.  在侧边栏的空白处**右键 -> 检查 (Inspect)**。
+[F14:47]| 2.  这会打开侧边栏专属的开发者工具。
+[F14:48]| 3.  在 **Console** 面板，您可以看到 `script.js` 发出的所有错误。如果 API 调用失败，报错信息会在这里显示（例如 `401 Unauthorized` 或网络跨域问题）。
+
+================================================================================
+文件路径: todo.md(F15) (约合大小: 2 KB)
+================================================================================
+[F15:1]| # Rail 迭代计划 (V0.2.0 - Intelligence & HUD Focus)
+[F15:2]| 
+[F15:3]| ## 1. 核心功能：🪄 结构化任务拆解 (Structural Decomposition)
+[F15:4]| - [ ] **UI 注入**：在 `renderTasks` 的任务行 `[F8:312]` 旁边增加一个 `decompose-btn`。
+[F15:5]| - [ ] **逻辑实现**：
+[F15:6]|     - 新增 `decomposeTask(taskId)` 函数。
+[F15:7]|     - 构建专用系统提示词：要求 AI 以 `###` 格式返回 3-5 个缩进的子步骤。
+[F15:8]|     - 成功后调用 `ingestTasks` 的解析部分，将新任务插入到 `tasks` 数组中该 taskId 的紧邻下方位置。
+[F15:9]| - [ ] **视觉反馈**：点击时按钮进入 `loading` 旋转状态，完成后恢复。
+[F15:10]| 
+[F15:11]| ## 2. 极致交互：键盘驱动与流式传输
+[F15:12]| - [ ] **AI 流式响应 (Streaming)**：
+[F15:13]|     - 重构 `sendChat`，使用 `ReadableStream` 替代目前的 `await fetch().json()`。
+[F15:14]|     - 实现打字机效果渲染，提升大段代码返回时的感知速度。
+[F15:15]| - [ ] **全局快捷键 (HUD Power)**：
+[F15:16]|     - `Alt + Enter`：发送聊天消息。
+[F15:17]|     - `Alt + Check` (或特定键)：将当前 Active 任务标记为 Done 并自动激活下一个（配合纳米模式效果极佳）。
+[F15:18]|     - `Alt + N`：快速在 Inline 和 Nano 布局之间切换。
+[F15:19]| 
+[F15:20]| ## 3. 视觉润色：HUD 细节增强
+[F15:21]| - [ ] **纳米模式边界感**：
+[F15:22]|     - 在 `renderTasks` `[F8:343]` 的切片逻辑中，如果当前是第一个任务，在列表顶部渲染一个淡色的 `[ SOURCE ]`；如果是最后一个，渲染 `[ DESTINATION ]`。
+[F15:23]| - [ ] **代码块一键复制**：
+[F15:24]|     - 在 Markdown 渲染出的 `<pre>` 标签右上角，动态增加一个透明的 "Copy" 按钮。
+[F15:25]| - [ ] **折叠状态优化**：
+[F15:26]|     - 在 `chat-collapsed` 状态下 `[F11:271]`，让输入框通过淡出效果隐藏，而非简单的 `display: none`，使切换更顺滑。
+[F15:27]| 
+[F15:28]| ## 4. 稳定性与规范
+[F15:29]| - [ ] **Prompt 变量补全**：在 `buildSystemPrompt` `[F8:703]` 中注入 `{TASK_DETAILS}`，将当前任务的 Markdown 正文也喂给 AI 增加上下文准确度。
+[F15:30]| <!-- - [ ] **导出/备份**：增加一个简单的“导出 JSON”按钮，防止本地存储意外丢失任务进度。 -->
+
+================================================================================
+文件路径: github\copilotrule.md(F16) (约合大小: 2 KB)
+================================================================================
+[F16:1]| # Project Rail - AI Instructions
+[F16:2]| 
+[F16:3]| ## 1. Project Identity
+[F16:4]| You are the lead developer for "Rail", a Chrome Extension designed to be a "Context Anchor" and "Execution GPS" for developers.
+[F16:5]| - **Core Philosophy**: Minimalist, Dark Mode, Local-First, One-Time Use (Disposable).
+[F16:6]| - **Tech Stack**: Vanilla JS (ES6+), HTML5, CSS3 (Flexbox), Chrome Extension Manifest V3. No React/Vue/Bundlers for the MVP.
+[F16:7]| 
+[F16:8]| ## 2. Architecture & Files
+[F16:9]| - **manifest.json**: Needs `sidePanel`, `activeTab`, `scripting`, `storage` permissions.
+[F16:10]| - **sidepanel.html**: The main UI.
+[F16:11]|   - Top 60%: Task List (Scrollable).
+[F16:12]|   - Bottom 40%: Chat Interface (Fixed).
+[F16:13]| - **styles.css**: VS Code-like Dark Mode theme. Colors: Bg `#1e1e1e`, Accent `#3b82f6`.
+[F16:14]| - **script.js**: Contains all logic for DOM manipulation, LocalStorage, and API calls.
+[F16:15]| 
+[F16:16]| ## 3. Core Features (The "Must-Haves")
+[F16:17]| ### A. Task List Logic
+[F16:18]| - **Data Structure**: Array of objects `{ id, text, status: 'pending'|'done', context_payload: {} }`.
+[F16:19]| - **Interaction**: Click to toggle done/active.
+[F16:20]| - **Smart Ingestion**: 
+[F16:21]|   - Allow users to paste raw text.
+[F16:22]|   - **Rule**: If raw text is pasted, simply split by newlines for the MVP (or call LLM if API key is present).
+[F16:23]| 
+[F16:24]| ### B. Chat & Context (BYOK)
+[F16:25]| - **Settings**: Store OpenAI API Key & Base URL in `localStorage`.
+[F16:26]| - **Context Injection**: When user asks a question in the chat input:
+[F16:27]|   1. Grab the currently **Active** task text.
+[F16:28]|   2. Grab the User's question.
+[F16:29]|   3. Construct System Prompt: "You are an execution assistant. Context Task: [Active Task]..."
+[F16:30]|   4. Call API (`POST /v1/chat/completions`).
+[F16:31]| 
+[F16:32]| ## 4. Coding Standards (Strict)
+[F16:33]| - **Error Handling**: Always check if API Key exists before calling API. Alert user if missing.
+[F16:34]| - **UI Feedback**: Show a loading spinner or text when waiting for API response.
+[F16:35]| - **Clean Code**: Keep logic in `script.js`. Use readable variable names. Comments are required for complex logic.
+[F16:36]| 
+[F16:37]| ## 5. Tone & Style
+[F16:38]| - Be concise.
+[F16:39]| - Focus on shipping working code.
+[F16:40]| - If I ask for a feature, implement it directly in the existing file structure.
 
 ## 统计信息
-- 包含文件数: 12
-- 总大小: 29 KB
+- 包含文件数: 16
+- 总大小: 91 KB

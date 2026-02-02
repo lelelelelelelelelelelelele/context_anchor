@@ -4,16 +4,25 @@ const ASSETS = [
   "./sidepanel.html",
   "./styles.css",
   "./script.js",
+  "./marked.min.js",
   "./system_prompt.txt",
   "./manifest.webmanifest",
 ];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then((cache) => cache.addAll(ASSETS))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then(async (cache) => {
+      // Cache assets individually so a missing optional asset (e.g. marked.min.js)
+      // doesn't break the whole service worker install.
+      await Promise.all(
+        ASSETS.map((asset) =>
+          cache.add(asset).catch(() => {
+            // ignore
+          })
+        )
+      );
+      await self.skipWaiting();
+    })
   );
 });
 

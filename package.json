@@ -1,0 +1,23 @@
+{
+  "name": "context_anchor",
+  "version": "1.0.0",
+  "description": "Minimalist, local-first side panel for task anchoring and execution chat.",
+  "main": "script.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lelelelelelelelelelelelele/context_anchor.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lelelelelelelelelelelelele/context_anchor/issues"
+  },
+  "homepage": "https://github.com/lelelelelelelelelelelelele/context_anchor#readme",
+  "dependencies": {
+    "marked": "^17.0.1"
+  }
+}

@@ -10,52 +10,108 @@
   </head>
   <body>
     <div class="app">
-      <section class="tasks">
-        <header class="panel-header">
-          <h1>Rail</h1>
-          <p>Context Anchor · Execution GPS</p>
-        </header>
-        <div class="ingest">
-          <textarea id="task-input" placeholder="Paste tasks, one per line..."></textarea>
-          <button id="add-tasks">Add Tasks</button>
-        </div>
-        <div id="task-list" class="task-list" aria-live="polite"></div>
-      </section>
-      <section class="chat">
-        <div class="chat-toolbar">
-          <button id="clear-chat" class="clear-chat" aria-label="Clear chat">Clear</button>
-          <button id="toggle-settings" class="settings-toggle" aria-label="Toggle settings">
-            <span class="settings-icon" aria-hidden="true">&#9881;</span>
-          </button>
-        </div>
-        <div class="settings">
-          <div class="provider-manager">
-            <select id="provider-select" aria-label="Provider"></select>
-            <button id="add-provider" class="provider-action" title="New Provider">+</button>
-            <button id="delete-provider" class="provider-action" title="Delete Provider">×</button>
+      <div id="main-page" class="page">
+        <section class="tasks">
+          <header class="panel-header">
+            <h1>Rail</h1>
+            <p>Context Anchor · Execution GPS</p>
+            <p id="task-doc-title" class="doc-title"></p>
+          </header>
+          <div class="ingest">
+            <textarea id="task-input" placeholder="Paste Markdown steps (###), e.g.\n### Do thing\n  details..."></textarea>
+            <button id="add-tasks">Add Tasks</button>
+            <button id="overview-tasks" class="clear-tasks" aria-label="Show overview">Overview</button>
+            <button id="clear-tasks" class="clear-tasks" aria-label="Clear tasks">Clear Tasks</button>
           </div>
+          <div class="tasks-body">
+            <div id="task-list" class="task-list" aria-live="polite"></div>
+            <aside id="task-details" class="task-details" aria-label="Active task details">
+              <div class="task-details-title" id="task-details-step"></div>
+              <div class="task-details-meta" id="task-details-meta"></div>
+              <div class="task-details-body md" id="task-details-body"></div>
+            </aside>
+          </div>
+          <div id="task-progress" class="task-progress task-status" aria-live="polite"></div>
+        </section>
+
+        <section class="chat">
+          <div class="chat-toolbar">
+            <button
+              id="chat-drawer-toggle"
+              class="chat-drawer-toggle settings-toggle"
+              aria-label="Toggle chat drawer"
+              title="Toggle chat"
+            >
+              ▼
+            </button>
+            <button id="clear-chat" class="clear-chat" aria-label="Clear chat">Clear</button>
+            <button id="open-settings" class="settings-toggle" aria-label="Open settings">
+              <span class="settings-icon" aria-hidden="true">&#9881;</span>
+            </button>
+          </div>
+          <div id="chat-messages" class="chat-messages"></div>
+          <div id="chat-status" class="chat-status"></div>
+          <div class="chat-input">
+            <input id="chat-input" type="text" placeholder="Ask about the active task..." />
+            <button id="send-chat">Send</button>
+          </div>
+        </section>
+      </div>
+
+      <div id="settings-page" class="page hidden" aria-label="Settings">
+        <header class="settings-header">
+          <button id="settings-back" class="settings-back" aria-label="Back">Back</button>
+          <h2>Settings</h2>
+        </header>
+
+        <section class="settings-section">
+          <h3>AI API Configs</h3>
+          <div class="providers-toolbar">
+            <button id="provider-new" class="provider-new">New</button>
+          </div>
+          <div id="providers-list" class="providers-list" aria-live="polite"></div>
+        </section>
+
+        <section class="settings-section">
+          <h3>Selected API</h3>
+          <div class="provider-form">
+            <label>
+              Name
+              <input id="provider-name" type="text" placeholder="My API" />
+            </label>
+            <label>
+              API Key
+              <input id="provider-key" type="password" placeholder="sk-..." />
+            </label>
+            <label>
+              Base URL
+              <input id="provider-url" type="text" placeholder="https://api.openai.com" />
+            </label>
+            <label>
+              Model
+              <input id="provider-model" type="text" placeholder="gpt-4o-mini" />
+            </label>
+            <div class="provider-form-actions">
+              <button id="provider-save" class="provider-save">Save</button>
+              <button id="provider-delete" class="provider-delete" aria-label="Delete selected API">Delete</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h3>Layout</h3>
           <label>
-            API Key
-            <input id="api-key" type="password" placeholder="sk-..." />
+            Task Layout
+            <select id="layout-mode" aria-label="Task layout">
+              <option value="split">Split (list + details)</option>
+              <option value="inline">Inline (active shows details)</option>
+              <option value="nano">Nano (prev/current/next)</option>
+            </select>
           </label>
-          <label>
-            Base URL
-            <input id="base-url" type="text" placeholder="https://api.openai.com" />
-          </label>
-          <label>
-            Model
-            <input id="model" type="text" placeholder="gpt-4o-mini" />
-          </label>
-          <button id="save-settings">Save Provider</button>
-        </div>
-        <div id="chat-messages" class="chat-messages"></div>
-        <div id="chat-status" class="chat-status"></div>
-        <div class="chat-input">
-          <input id="chat-input" type="text" placeholder="Ask about the active task..." />
-          <button id="send-chat">Send</button>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
+    <script src="marked.min.js"></script>
     <script src="script.js"></script>
   </body>
 </html>
