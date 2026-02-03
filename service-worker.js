@@ -1,4 +1,4 @@
-const CACHE_NAME = "rail-pwa-v1";
+const CACHE_NAME = "rail-pwa-v2";
 const ASSETS = [
   "./",
   "./sidepanel.html",
@@ -7,6 +7,8 @@ const ASSETS = [
   "./marked.min.js",
   "./system_prompt.txt",
   "./manifest.webmanifest",
+  "./icon-192.png",
+  "./icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {
