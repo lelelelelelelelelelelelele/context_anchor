@@ -2,6 +2,17 @@
 
 Minimalist, local-first side panel for task anchoring and execution chat.
 
+## Features
+- **Local-first tasks**: Tasks and settings persist in local storage.
+- **AI chat with context**: Injects active task, details, and progress into prompts.
+- **Streaming responses**: SSE + typewriter rendering for fast feedback.
+- **AI Convert**: Turn raw text into Rail tasks with `todolist_get.txt`.
+- **Layouts**: Split, Inline, and Nano modes with active-step focus.
+- **Nano markers**: `[ SOURCE ]` / `[ DESTINATION ]` boundary hints.
+- **Markdown details**: Rendered via local `marked.min.js` with sanitization.
+- **Code copy**: One-click copy buttons on code blocks.
+- **PWA-ready**: Installable when hosted with service worker + manifest.
+
 ## Files
 - `manifest.json`: Chrome Extension Manifest V3.
 - `sidepanel.html`: UI layout (60% tasks, 40% chat).
@@ -70,6 +81,12 @@ Notes:
 - **API validation**: Remove API key → sending chat alerts.
 - **Context injection**: Active task, totals, and pending list appear in prompt (inspect via server logs if using a proxy).
 - **Providers**: Add multiple providers, switch dropdown, and verify settings change.
+
+## Keyboard Shortcuts
+- `Enter`: Send chat message (when focused in the chat input).
+- `Alt + Enter`: Toggle chat drawer open/close; focuses input when opening.
+- `Alt + D`: Mark active task as done and move to next pending.
+- `Alt + N`: Toggle task layout between Inline and Nano.
 
 ## System Prompt Template
 The system prompt lives in `system_prompt.txt`. You can edit it directly and use these placeholders:

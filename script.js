@@ -7,6 +7,9 @@ const TEMP_CHAT_KEY = "rail_temp_chat";
 const DEFAULT_BASE_URL = "https://api.openai.com";
 const DEFAULT_MODEL = "gpt-4o-mini";
 const PROMPT_PATH = "system_prompt.txt";
+const TODOLIST_PROMPT_PATH = "todolist_get.txt";
+const ENABLE_DECOMPOSE = false;
+const MAX_CHAT_HISTORY = 50;
 const DEFAULT_SYSTEM_PROMPT_TEMPLATE = `You are Rail, a developer's Execution GPS.
 
 [MACRO GOAL / PROGRESS]
@@ -25,11 +28,26 @@ Task details (Markdown):
 1. Your answers MUST align with the Current Focus.
 2. Use the Macro Goal and Next Steps only as background context to ensure consistency.
 3. Be a minimalist. Give high-density, low-fluff code.`;
+const DEFAULT_TODOLIST_PROMPT_TEMPLATE = `You are a Rail task-ingest format converter.
+
+[FORMAT]
+- Use only: # (optional title), ## (optional group), ### (task).
+- Details must be indented lines under a ### task.
+- Never output lines starting with ### inside details.
+- Keep all commands/paths/ports verbatim in details; do not summarize.
+- If input is not a todo list, output exactly: NOT_A_TODOLIST
+
+<<<INPUT
+(paste input here)
+INPUT
+
+Output only the converted Rail Markdown.`;
 
 let tasks = [];
 let activeTaskId = null;
 let chatHistory = [];
 let systemPromptTemplate = DEFAULT_SYSTEM_PROMPT_TEMPLATE;
+let todolistPromptTemplate = null;
 let providers = [];
 let currentProviderIdx = 0;
 let layoutMode = "split";
@@ -37,6 +55,7 @@ let chatCollapsed = true;
 
 const taskInput = document.getElementById("task-input");
 const addTasksButton = document.getElementById("add-tasks");
+const aiConvertToggle = document.getElementById("ai-convert");
 const overviewTasksButton = document.getElementById("overview-tasks");
 const clearTasksButton = document.getElementById("clear-tasks");
 const taskList = document.getElementById("task-list");
@@ -55,9 +74,15 @@ const chatDrawerToggle = document.getElementById("chat-drawer-toggle");
 
 // Page navigation
 const mainPage = document.getElementById("main-page");
+const editorPage = document.getElementById("editor-page");
 const settingsPage = document.getElementById("settings-page");
+
+const addTaskToggle = document.getElementById("add-task-toggle");
+const editorBackButton = document.getElementById("editor-back");
 const openSettingsButton = document.getElementById("open-settings");
 const settingsBackButton = document.getElementById("settings-back");
+
+const progressBarFill = document.getElementById("progress-bar-fill");
 
 // Settings page controls
 const providersList = document.getElementById("providers-list");
@@ -71,6 +96,14 @@ const providerDeleteButton = document.getElementById("provider-delete");
 const layoutModeSelect = document.getElementById("layout-mode");
 
 let markedConfigured = false;
+
+function setAddTasksLoading(isLoading, label = "Add Tasks") {
+  if (!addTasksButton) {
+    return;
+  }
+  addTasksButton.disabled = Boolean(isLoading);
+  addTasksButton.textContent = isLoading ? "Converting..." : label;
+}
 
 function escapeHtml(text) {
   return String(text)
@@ -177,6 +210,67 @@ function renderMarkdownToSafeHtml(markdownText) {
   return sanitizeRenderedHtml(rendered);
 }
 
+async function copyTextToClipboard(text) {
+  const payload = text || "";
+  if (!payload) {
+    return false;
+  }
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(payload);
+      return true;
+    }
+  } catch (error) {
+    // Fallback below.
+  }
+
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = payload;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    const success = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return success;
+  } catch (error) {
+    return false;
+  }
+}
+
+function enhanceCodeBlocks(container) {
+  if (!container) {
+    return;
+  }
+  const blocks = container.querySelectorAll("pre");
+  blocks.forEach((block) => {
+    if (block.dataset.copyReady === "true") {
+      return;
+    }
+    block.dataset.copyReady = "true";
+    block.classList.add("code-block");
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "copy-code";
+    button.textContent = "Copy";
+    button.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      const code = block.querySelector("code");
+      const text = code ? code.textContent : block.textContent;
+      const success = await copyTextToClipboard(text);
+      button.textContent = success ? "Copied" : "Copy failed";
+      setTimeout(() => {
+        button.textContent = "Copy";
+      }, 1200);
+    });
+
+    block.appendChild(button);
+  });
+}
+
 function persistLayoutMode() {
   localStorage.setItem(LAYOUT_MODE_KEY, layoutMode);
 }
@@ -189,6 +283,39 @@ function applyLayoutMode() {
   document.body.classList.toggle("layout-nano", layoutMode === "nano");
 }
 
+function toggleInlineNanoLayout() {
+  if (layoutMode === "nano") {
+    layoutMode = "inline";
+  } else if (layoutMode === "inline") {
+    layoutMode = "nano";
+  } else {
+    layoutMode = "inline";
+  }
+  if (layoutModeSelect) {
+    layoutModeSelect.value = layoutMode;
+  }
+  persistLayoutMode();
+  ensureActiveTaskSelection();
+  renderTasks();
+}
+
+function markActiveTaskDoneAndNext() {
+  if (!activeTaskId) {
+    return;
+  }
+  const task = tasks.find((item) => item.id === activeTaskId);
+  if (!task) {
+    return;
+  }
+  if (task.status !== "done") {
+    task.status = "done";
+  }
+  const nextPending = tasks.find((item) => item.status === "pending");
+  activeTaskId = nextPending ? nextPending.id : null;
+  saveTasks();
+  renderTasks();
+}
+
 function setChatCollapsed(nextCollapsed) {
   chatCollapsed = Boolean(nextCollapsed);
   if (document.body) {
@@ -198,6 +325,26 @@ function setChatCollapsed(nextCollapsed) {
     chatDrawerToggle.textContent = chatCollapsed ? "▼" : "▲";
     chatDrawerToggle.setAttribute("aria-expanded", chatCollapsed ? "false" : "true");
   }
+}
+
+function openEditorPage() {
+  if (mainPage) mainPage.classList.add("hidden");
+  if (settingsPage) settingsPage.classList.add("hidden");
+  if (editorPage) editorPage.classList.remove("hidden");
+  
+  if (taskInput) {
+    // Fill with current tasks as Markdown
+    const currentMd = tasksToMarkdown(tasks);
+    taskInput.value = currentMd;
+    taskInput.focus();
+    // Move cursor to end
+    taskInput.setSelectionRange(currentMd.length, currentMd.length);
+  }
+}
+
+function closeEditorPage() {
+  if (editorPage) editorPage.classList.add("hidden");
+  if (mainPage) mainPage.classList.remove("hidden");
 }
 
 function openSettingsPage() {
@@ -217,6 +364,9 @@ function openSettingsPage() {
 function openMainPage() {
   if (settingsPage) {
     settingsPage.classList.add("hidden");
+  }
+  if (editorPage) {
+    editorPage.classList.add("hidden");
   }
   if (mainPage) {
     mainPage.classList.remove("hidden");
@@ -314,17 +464,96 @@ function renderActiveTaskDetails() {
   taskDetailsStep.textContent = activeTask.text;
   taskDetailsMeta.textContent = groupTitle ? `## ${groupTitle}` : "";
   taskDetailsBody.innerHTML = renderMarkdownToSafeHtml(details || "(no details)");
+  enhanceCodeBlocks(taskDetailsBody);
+}
+
+function createTaskDetailsSnippet(task) {
+  const { documentTitle, groupTitle, details } = getActiveTaskMeta(task);
+  const container = document.createDocumentFragment();
+
+  const metaParts = [];
+  if (documentTitle) metaParts.push(`# ${documentTitle}`);
+  if (groupTitle) metaParts.push(`## ${groupTitle}`);
+
+  if (metaParts.length > 0) {
+    const meta = document.createElement("div");
+    meta.className = "task-inline-meta";
+    meta.textContent = metaParts.join(" · ");
+    container.appendChild(meta);
+  }
+
+  const body = document.createElement("div");
+  body.className = "task-inline-details md";
+  body.innerHTML = renderMarkdownToSafeHtml(details || "(no details)");
+  enhanceCodeBlocks(body);
+  container.appendChild(body);
+
+  return container;
+}
+
+function createTaskItem(task, options = {}) {
+  const { isActive, isSecondary } = options;
+  const item = document.createElement("div");
+  item.className = "task-item";
+  if (task.status === "done") item.classList.add("done");
+  if (isActive) item.classList.add("active");
+  if (isSecondary) item.classList.add("nano-secondary");
+  item.dataset.id = String(task.id);
+
+  const row = document.createElement("div");
+  row.className = "task-item-row";
+
+  const text = document.createElement("span");
+  text.textContent = task.text;
+
+  const status = document.createElement("span");
+  status.className = "task-status";
+  status.textContent = task.status === "done" ? "Done" : "Active";
+
+  row.appendChild(text);
+  row.appendChild(status);
+
+  if (ENABLE_DECOMPOSE) {
+    const decomposeButton = document.createElement("button");
+    decomposeButton.className = "decompose-btn";
+    decomposeButton.type = "button";
+    decomposeButton.textContent = "Decompose";
+    decomposeButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      decomposeTask(task.id, decomposeButton);
+    });
+    row.appendChild(decomposeButton);
+  }
+  item.appendChild(row);
+
+  // Inline/Nano details
+  if (isActive && (layoutMode === "inline" || layoutMode === "nano")) {
+    item.classList.add("with-details");
+    item.appendChild(createTaskDetailsSnippet(task));
+  }
+
+  item.addEventListener("click", (event) => {
+    if (window.getSelection().toString().length > 0) return;
+    if (event.target.closest(".copy-code") || event.target.closest("pre") || event.target.closest("code")) return;
+    if (ENABLE_DECOMPOSE && event.target.closest(".decompose-btn")) return;
+    toggleTask(task.id);
+  });
+
+  return item;
 }
 
 function renderTasks() {
   taskList.innerHTML = "";
 
-  renderActiveTaskDetails();
-
   if (taskProgress) {
     const totalTasks = tasks.length;
     const doneTasks = tasks.filter((task) => task.status === "done").length;
     taskProgress.textContent = `${doneTasks}/${totalTasks} 完成`;
+
+    if (progressBarFill) {
+      const percentage = totalTasks > 0 ? (doneTasks / totalTasks) * 100 : 0;
+      progressBarFill.style.width = `${percentage}%`;
+    }
   }
 
   if (tasks.length === 0) {
@@ -352,60 +581,30 @@ function renderTasks() {
     document.body.classList.toggle("nano-view", isNanoMode && activeIdx >= 0);
   }
 
+  if (isNanoMode && activeIdx >= 0) {
+    if (activeIdx === 0) {
+      const marker = document.createElement("div");
+      marker.className = "nano-marker";
+      marker.textContent = "[ SOURCE ]";
+      taskList.appendChild(marker);
+    }
+  }
+
   tasksToRender.forEach((task) => {
-    const item = document.createElement("div");
-    item.className = "task-item";
-    if (task.status === "done") {
-      item.classList.add("done");
-    }
-    if (task.id === activeTaskId) {
-      item.classList.add("active");
-    } else if (isNanoMode && activeIdx >= 0) {
-      item.classList.add("nano-secondary");
-    }
-    item.dataset.id = String(task.id);
-
-    const row = document.createElement("div");
-    row.className = "task-item-row";
-
-    const text = document.createElement("span");
-    text.textContent = task.text;
-
-    const status = document.createElement("span");
-    status.className = "task-status";
-    status.textContent = task.status === "done" ? "Done" : "Active";
-
-    row.appendChild(text);
-    row.appendChild(status);
-    item.appendChild(row);
-
-    if ((layoutMode === "inline" || layoutMode === "nano") && task.id === activeTaskId) {
-      const { documentTitle, groupTitle, details } = getActiveTaskMeta(task);
-      const metaParts = [];
-      if (documentTitle) {
-        metaParts.push(`# ${documentTitle}`);
-      }
-      if (groupTitle) {
-        metaParts.push(`## ${groupTitle}`);
-      }
-
-      if (metaParts.length > 0) {
-        const meta = document.createElement("div");
-        meta.className = "task-inline-meta";
-        meta.textContent = metaParts.join(" · ");
-        item.appendChild(meta);
-      }
-
-      const body = document.createElement("div");
-      body.className = "task-inline-details md";
-      body.innerHTML = renderMarkdownToSafeHtml(details || "(no details)");
-      item.classList.add("with-details");
-      item.appendChild(body);
-    }
-
-    item.addEventListener("click", () => toggleTask(task.id));
+    const isActive = task.id === activeTaskId;
+    const isSecondary = isNanoMode && activeIdx >= 0 && !isActive;
+    const item = createTaskItem(task, { isActive, isSecondary });
     taskList.appendChild(item);
   });
+
+  if (isNanoMode && activeIdx >= 0) {
+    if (activeIdx === tasks.length - 1) {
+      const marker = document.createElement("div");
+      marker.className = "nano-marker";
+      marker.textContent = "[ DESTINATION ]";
+      taskList.appendChild(marker);
+    }
+  }
 
   renderActiveTaskDetails();
 }
@@ -438,16 +637,7 @@ function toggleTask(taskId) {
   renderTasks();
 }
 
-function ingestTasks() {
-  const rawText = taskInput.value;
-  if (!rawText || !rawText.trim()) {
-    return;
-  }
-
-  // Spec (v1):
-  // - `### ` headings define steps (ingested as tasks).
-  // - Indented continuation lines under a step become `context_payload.details`.
-  // - `#` (doc title) and `##` (group) are captured as metadata for future use.
+function parseMarkdownTasks(rawText) {
   const lines = rawText.replace(/\r\n/g, "\n").split("\n");
 
   let documentTitle = null;
@@ -521,12 +711,11 @@ function ingestTasks() {
   }
 
   flushCurrentStep();
-  if (steps.length === 0) {
-    alert("No steps found. Use Markdown headings like `### Step name`.");
-    return;
-  }
+  return steps;
+}
 
-  const newTasks = steps.map((step, index) => ({
+function createTasksFromSteps(steps) {
+  return steps.map((step, index) => ({
     id: Date.now() + index,
     text: step.text,
     status: "pending",
@@ -536,16 +725,229 @@ function ingestTasks() {
       details: step.details,
     },
   }));
+}
 
-  tasks = [...tasks, ...newTasks];
+function insertTasksAfter(taskId, newTasks) {
+  const insertIndex = tasks.findIndex((task) => task.id === taskId);
+  if (insertIndex === -1) {
+    tasks = [...tasks, ...newTasks];
+    return;
+  }
+  tasks.splice(insertIndex + 1, 0, ...newTasks);
+}
+
+function setDecomposeButtonLoading(button, isLoading) {
+  if (!button) {
+    return;
+  }
+  button.classList.toggle("loading", isLoading);
+  button.disabled = isLoading;
+  button.textContent = isLoading ? "Working..." : "Decompose";
+}
+
+async function decomposeTask(taskId, button) {
+  const task = tasks.find((item) => item.id === taskId);
+  if (!task) {
+    return;
+  }
+
+  if (button?.disabled) {
+    return;
+  }
+
+  const provider = providers[currentProviderIdx] || {
+    name: "Default",
+    key: "",
+    url: DEFAULT_BASE_URL,
+    model: DEFAULT_MODEL,
+  };
+
+  const apiKey = (provider.key || "").trim();
+  if (!apiKey) {
+    alert("Missing API Key. Open Settings to configure an API.");
+    return;
+  }
+
+  setDecomposeButtonLoading(button, true);
+
+  const baseUrl = (provider.url || DEFAULT_BASE_URL).trim() || DEFAULT_BASE_URL;
+  const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
+  const endpointUrl = `${normalizedBaseUrl}/chat/completions`;
+  const model = (provider.model || DEFAULT_MODEL).trim() || DEFAULT_MODEL;
+
+  const { details } = getActiveTaskMeta(task);
+  const inputText = [task.text, details].filter(Boolean).join("\n\n");
+
+  const promptTemplate = (await loadTodoListPrompt()) || DEFAULT_TODOLIST_PROMPT_TEMPLATE;
+  const systemPrompt = injectTodoListInput(promptTemplate, inputText);
+
+  try {
+    const response = await fetch(endpointUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "system", content: systemPrompt }],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "API request failed.");
+    }
+
+    const data = await response.json();
+    const reply = data.choices?.[0]?.message?.content || "";
+    const trimmedReply = reply.trim();
+    if (!trimmedReply) {
+      throw new Error("Empty response from assistant.");
+    }
+    if (trimmedReply === "NOT_A_TODOLIST") {
+      alert("No todo list detected in this task.");
+      return;
+    }
+
+    const steps = parseMarkdownTasks(trimmedReply);
+    if (steps.length === 0) {
+      alert("No steps found in decomposition output.");
+      return;
+    }
+
+    const newTasks = createTasksFromSteps(steps);
+    insertTasksAfter(taskId, newTasks);
+    saveTasks();
+    renderTasks();
+  } catch (error) {
+    alert(`Decompose failed: ${error.message}`);
+  } finally {
+    setDecomposeButtonLoading(button, false);
+  }
+}
+
+async function convertAndIngestTasks() {
+  const rawText = taskInput.value;
+  if (!rawText || !rawText.trim()) {
+    return;
+  }
+
+  const provider = providers[currentProviderIdx] || {
+    name: "Default",
+    key: "",
+    url: DEFAULT_BASE_URL,
+    model: DEFAULT_MODEL,
+  };
+
+  const apiKey = (provider.key || "").trim();
+  if (!apiKey) {
+    alert("Missing API Key. Open Settings to configure an API.");
+    return;
+  }
+
+  setAddTasksLoading(true);
+
+  const baseUrl = (provider.url || DEFAULT_BASE_URL).trim() || DEFAULT_BASE_URL;
+  const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
+  const endpointUrl = `${normalizedBaseUrl}/chat/completions`;
+  const model = (provider.model || DEFAULT_MODEL).trim() || DEFAULT_MODEL;
+
+  const promptTemplate = (await loadTodoListPrompt()) || DEFAULT_TODOLIST_PROMPT_TEMPLATE;
+  const systemPrompt = injectTodoListInput(promptTemplate, rawText);
+
+  try {
+    const response = await fetch(endpointUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "system", content: systemPrompt }],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "API request failed.");
+    }
+
+    const data = await response.json();
+    const rawResult = data.choices?.[0]?.message?.content || "";
+    
+    if (rawResult.trim() === "NOT_A_TODOLIST") {
+      alert("AI did not detect a valid task list in your input.");
+      return;
+    }
+
+    const steps = parseMarkdownTasks(rawResult);
+
+    if (steps.length === 0) {
+      alert("AI failed to generate valid Rail tasks. Please review the input material.");
+      return;
+    }
+
+    const newTasks = createTasksFromSteps(steps);
+    // Replace current tasks with the full list from editor
+    tasks = newTasks; 
+    taskInput.value = "";
+
+    if (newTasks.length > 0) {
+      // Keep active task if it still exists, else pick first
+      const stillExists = tasks.some(t => t.id === activeTaskId);
+      if (!stillExists) {
+        activeTaskId = newTasks[0].id;
+      }
+    } else {
+      activeTaskId = null;
+    }
+
+    saveTasks();
+    renderTasks();
+    closeEditorPage();
+  } catch (error) {
+    alert(`Conversion failed: ${error.message}`);
+  } finally {
+    setAddTasksLoading(false);
+  }
+}
+
+function ingestTasks() {
+  const rawText = taskInput.value;
+  if (!rawText || !rawText.trim()) {
+    return;
+  }
+
+  // Spec (v1):
+  // - `### ` headings define steps (ingested as tasks).
+  // - Indented continuation lines under a step become `context_payload.details`.
+  // - `#` (doc title) and `##` (group) are captured as metadata for future use.
+  const steps = parseMarkdownTasks(rawText);
+  if (steps.length === 0) {
+    alert("No steps found. Use Markdown headings like `### Step name`.");
+    return;
+  }
+
+  const newTasks = createTasksFromSteps(steps);
+
+  // Replace current tasks with the full list from editor
+  tasks = newTasks; 
   taskInput.value = "";
 
-  if (!activeTaskId && newTasks.length > 0 && layoutMode !== "nano") {
-    activeTaskId = newTasks[0].id;
+  if (tasks.length > 0) {
+    const exists = tasks.some(t => t.id === activeTaskId);
+    if (!exists) {
+      activeTaskId = tasks[0].id;
+    }
+  } else {
+    activeTaskId = null;
   }
 
   saveTasks();
   renderTasks();
+  closeEditorPage();
 }
 
 function clearAllTasks() {
@@ -563,10 +965,18 @@ function clearAllTasks() {
   saveTasks();
   renderTasks();
 
+  if (taskInput) {
+    taskInput.value = "";
+  }
+
   chatHistory = [];
   chatMessages.innerHTML = "";
   persistChatHistory();
   appendMessage("system", "Tasks cleared.");
+
+  if (taskInput) {
+    taskInput.focus();
+  }
 }
 
 function showOverview() {
@@ -738,6 +1148,7 @@ function appendMessage(role, content) {
   const bubble = document.createElement("div");
   bubble.className = `chat-bubble ${role} md`;
   bubble.innerHTML = renderMarkdownToSafeHtml(content);
+  enhanceCodeBlocks(bubble);
   chatMessages.appendChild(bubble);
   chatMessages.scrollTop = chatMessages.scrollHeight;
   persistChatHistory();
@@ -762,6 +1173,36 @@ async function loadSystemPrompt() {
   }
 }
 
+async function loadTodoListPrompt() {
+  if (todolistPromptTemplate) {
+    return todolistPromptTemplate;
+  }
+  try {
+    const promptUrl =
+      typeof chrome !== "undefined" && chrome.runtime?.getURL
+        ? chrome.runtime.getURL(TODOLIST_PROMPT_PATH)
+        : TODOLIST_PROMPT_PATH;
+    const response = await fetch(promptUrl);
+    if (!response.ok) {
+      return null;
+    }
+    const text = await response.text();
+    todolistPromptTemplate = text?.trim() || null;
+    return todolistPromptTemplate;
+  } catch (error) {
+    return null;
+  }
+}
+
+function injectTodoListInput(template, inputText) {
+  const markerStart = "<<<INPUT";
+  const markerEnd = "INPUT";
+  if (template && template.includes(markerStart) && template.includes(markerEnd)) {
+    return template.replace(new RegExp(`${markerStart}[\\s\\S]*?${markerEnd}`), `${markerStart}\n${inputText}\n${markerEnd}`);
+  }
+  return `${template || ""}\n\n${markerStart}\n${inputText}\n${markerEnd}\n`;
+}
+
 function buildSystemPrompt(activeTaskText) {
   const template = systemPromptTemplate || DEFAULT_SYSTEM_PROMPT_TEMPLATE;
   const totalTasks = tasks.length;
@@ -782,6 +1223,10 @@ function buildSystemPrompt(activeTaskText) {
 }
 
 function persistChatHistory() {
+  // Prune history if it gets too long
+  if (chatHistory.length > MAX_CHAT_HISTORY) {
+    chatHistory = chatHistory.slice(-MAX_CHAT_HISTORY);
+  }
   localStorage.setItem(TEMP_CHAT_KEY, JSON.stringify(chatHistory));
 }
 
@@ -857,6 +1302,7 @@ async function sendChat() {
       },
       body: JSON.stringify({
         model,
+        stream: true,
         messages: [{ role: "system", content: systemPrompt }, ...chatHistory],
       }),
     });
@@ -865,12 +1311,130 @@ async function sendChat() {
       const errorText = await response.text();
       throw new Error(errorText || "API request failed.");
     }
+    const contentType = response.headers.get("content-type") || "";
+    const isEventStream = contentType.includes("text/event-stream");
 
-    const data = await response.json();
-    const reply =
-      data.choices?.[0]?.message?.content || "No response from assistant.";
+    if (!response.body || !isEventStream) {
+      const data = await response.json();
+      const reply =
+        data.choices?.[0]?.message?.content || "No response from assistant.";
+      chatHistory.push({ role: "assistant", content: reply });
+      appendMessage("assistant", reply);
+      return;
+    }
+
+    const assistantBubble = document.createElement("div");
+    assistantBubble.className = "chat-bubble assistant md";
+    assistantBubble.innerHTML = renderMarkdownToSafeHtml("");
+    chatMessages.appendChild(assistantBubble);
+
+    let assistantText = "";
+    let pendingText = "";
+    let streamDone = false;
+    let typingTimer = null;
+    const typingInterval = 18;
+    const charsPerTick = 3;
+
+    const updateBubble = (text) => {
+      assistantBubble.innerHTML = renderMarkdownToSafeHtml(text);
+      enhanceCodeBlocks(assistantBubble);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    };
+
+    const startTyping = () => {
+      if (typingTimer) {
+        return;
+      }
+      typingTimer = setInterval(() => {
+        if (!pendingText.length) {
+          if (streamDone) {
+            clearInterval(typingTimer);
+            typingTimer = null;
+          }
+          return;
+        }
+        const chunk = pendingText.slice(0, charsPerTick);
+        pendingText = pendingText.slice(charsPerTick);
+        assistantText += chunk;
+        updateBubble(assistantText);
+      }, typingInterval);
+    };
+
+    const waitForTyping = () =>
+      new Promise((resolve) => {
+        const check = () => {
+          if (!pendingText.length) {
+            resolve();
+            return;
+          }
+          setTimeout(check, 30);
+        };
+        check();
+      });
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) {
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith("data:")) {
+          continue;
+        }
+        const data = trimmed.slice(5).trim();
+        if (data === "[DONE]") {
+          streamDone = true;
+          break;
+        }
+        try {
+          const payload = JSON.parse(data);
+          const delta = payload.choices?.[0]?.delta?.content ?? payload.choices?.[0]?.message?.content ?? "";
+          if (delta) {
+            pendingText += delta;
+            startTyping();
+          }
+        } catch (error) {
+          // Ignore malformed stream chunks.
+        }
+      }
+
+      if (streamDone) {
+        break;
+      }
+    }
+
+    streamDone = true;
+    startTyping();
+    await waitForTyping();
+
+    if (typingTimer) {
+      clearInterval(typingTimer);
+      typingTimer = null;
+    }
+
+    if (pendingText.length) {
+      assistantText += pendingText;
+      pendingText = "";
+      updateBubble(assistantText);
+    }
+
+    if (!assistantText) {
+      assistantText = "No response from assistant.";
+      updateBubble(assistantText);
+    }
+
+    const reply = assistantText;
     chatHistory.push({ role: "assistant", content: reply });
-    appendMessage("assistant", reply);
+    persistChatHistory();
   } catch (error) {
     appendMessage("assistant", `Error: ${error.message}`);
   } finally {
@@ -878,7 +1442,53 @@ async function sendChat() {
   }
 }
 
-addTasksButton.addEventListener("click", ingestTasks);
+function tasksToMarkdown(taskListData) {
+  if (!taskListData || taskListData.length === 0) {
+    return "";
+  }
+  
+  let md = "";
+  let lastDocTitle = null;
+  let lastGroupTitle = null;
+
+  taskListData.forEach((task) => {
+    const meta = task.context_payload || {};
+    
+    // Add document title if it changed
+    if (meta.document_title && meta.document_title !== lastDocTitle) {
+      md += `# ${meta.document_title}\n\n`;
+      lastDocTitle = meta.document_title;
+      lastGroupTitle = null; // Reset group title when doc changes
+    }
+    
+    // Add group title if it changed
+    if (meta.group_title && meta.group_title !== lastGroupTitle) {
+      md += `## ${meta.group_title}\n\n`;
+      lastGroupTitle = meta.group_title;
+    }
+    
+    md += `### ${task.text}\n`;
+    if (meta.details) {
+      // Indent details by 2 spaces
+      const details = meta.details
+        .split("\n")
+        .map((line) => (line.trim() ? `  ${line}` : ""))
+        .join("\n");
+      md += `${details}\n`;
+    }
+    md += "\n";
+  });
+  
+  return md.trim();
+}
+
+addTasksButton.addEventListener("click", async () => {
+  if (aiConvertToggle?.checked) {
+    await convertAndIngestTasks();
+    return;
+  }
+  ingestTasks();
+});
 if (overviewTasksButton) {
   overviewTasksButton.addEventListener("click", showOverview);
 }
@@ -892,6 +1502,14 @@ if (openSettingsButton) {
 
 if (settingsBackButton) {
   settingsBackButton.addEventListener("click", openMainPage);
+}
+
+if (addTaskToggle) {
+  addTaskToggle.addEventListener("click", openEditorPage);
+}
+
+if (editorBackButton) {
+  editorBackButton.addEventListener("click", closeEditorPage);
 }
 
 if (providerNewButton) {
@@ -925,6 +1543,32 @@ if (chatDrawerToggle) {
 chatInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     sendChat();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (!event.altKey) {
+    return;
+  }
+  const key = event.key.toLowerCase();
+  if (event.key === "enter") {
+    event.preventDefault();
+    const nextCollapsed = !chatCollapsed;
+    setChatCollapsed(nextCollapsed);
+    if (!nextCollapsed && chatInput) {
+      chatInput.focus();
+      chatInput.select();
+    }
+    return;
+  }
+  if (key === "d") {
+    event.preventDefault();
+    markActiveTaskDoneAndNext();
+    return;
+  }
+  if (key === "n") {
+    event.preventDefault();
+    toggleInlineNanoLayout();
   }
 });
 

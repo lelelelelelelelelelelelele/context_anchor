@@ -1,30 +1,17 @@
-# Rail 迭代计划 (V0.2.0 - Intelligence & HUD Focus)
+# Rail 迭代计划 (V0.2.1 - Intelligence & HUD Focus)
 
-## 1. 核心功能：🪄 结构化任务拆解 (Structural Decomposition)
-- [ ] **UI 注入**：在 `renderTasks` 的任务行 `[F8:312]` 旁边增加一个 `decompose-btn`。
-- [ ] **逻辑实现**：
-    - 新增 `decomposeTask(taskId)` 函数。
-    - 构建专用系统提示词：要求 AI 以 `###` 格式返回 3-5 个缩进的子步骤。
-    - 成功后调用 `ingestTasks` 的解析部分，将新任务插入到 `tasks` 数组中该 taskId 的紧邻下方位置。
-- [ ] **视觉反馈**：点击时按钮进入 `loading` 旋转状态，完成后恢复。
+## 1. AI 上下文进阶 (Intelligence)
+- [ ] **项目全局记事本 (Global Context)**：
+    - 增加一个持久化的“项目全局记事本”设置。
+    - 在 `buildSystemPrompt` 中注入 `{PROJECT_CONTEXT}` 变量。
+    - 允许存放通用规则（如：编码规范、架构约束）。 * 暂时不加入，保持轻量
 
-## 2. 极致交互：键盘驱动与流式传输
-- [ ] **AI 流式响应 (Streaming)**：
-    - 重构 `sendChat`，使用 `ReadableStream` 替代目前的 `await fetch().json()`。
-    - 实现打字机效果渲染，提升大段代码返回时的感知速度。
-- [ ] **全局快捷键 (HUD Power)**：
-    - `Alt + Enter`：发送聊天消息。
-    - `Alt + Check` (或特定键)：将当前 Active 任务标记为 Done 并自动激活下一个（配合纳米模式效果极佳）。
-    - `Alt + N`：快速在 Inline 和 Nano 布局之间切换。
+## 2. 交互与动效 (Interactions & Animations)
+- [ ] **任务完成微动画**：点击完成时增加复选框缩放及删除线平滑划过效果。
+- [ ] **页面平滑切换**：主页、编辑器、设置页切换时增加淡入淡出或位移过渡。
+- [ ] **活跃任务视觉引导**：在当前任务左侧增加动态的“活动条”指示器。
+- [ ] **空状态美化**：优化无任务/无配置时的显示，增加引导性操作指引。
 
-## 3. 视觉润色：HUD 细节增强
-- [ ] **纳米模式边界感**：
-    - 在 `renderTasks` `[F8:343]` 的切片逻辑中，如果当前是第一个任务，在列表顶部渲染一个淡色的 `[ SOURCE ]`；如果是最后一个，渲染 `[ DESTINATION ]`。
-- [ ] **代码块一键复制**：
-    - 在 Markdown 渲染出的 `<pre>` 标签右上角，动态增加一个透明的 "Copy" 按钮。
-- [ ] **折叠状态优化**：
-    - 在 `chat-collapsed` 状态下 `[F11:271]`，让输入框通过淡出效果隐藏，而非简单的 `display: none`，使切换更顺滑。
-
-## 4. 稳定性与规范
-- [ ] **Prompt 变量补全**：在 `buildSystemPrompt` `[F8:703]` 中注入 `{TASK_DETAILS}`，将当前任务的 Markdown 正文也喂给 AI 增加上下文准确度。
-<!-- - [ ] **导出/备份**：增加一个简单的“导出 JSON”按钮，防止本地存储意外丢失任务进度。 -->
+## 3. 代码质量与重构 (Refactoring & Quality)
+- [ ] **存储抽象**：将 `localStorage` 操作封装为统一的存储服务，为未来切换到 `chrome.storage` 做准备。
+- [ ] **样式模块化**：整理 `styles.css`，采用更规范的 BEM 或变量管理方式。

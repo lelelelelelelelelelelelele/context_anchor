@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Rail",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Context Anchor and Execution GPS for developers.",
   "permissions": ["sidePanel", "activeTab", "scripting", "storage"],
   "host_permissions": ["<all_urls>"],

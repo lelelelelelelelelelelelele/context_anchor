@@ -1,85 +1,52 @@
-# Demo Project
-## Phase A
+# Rail Task List Examples
 
-### Implement parser
-  Accept only ### headings as steps.
-  Indented lines become details.
+This file provides examples of valid Markdown formats recognized by Rail. You can copy and paste these into the Task Editor.
 
-### Update docs
-  Mention the format in README.
+## Example 1: Basic Task List
+### Set up development environment
+  Install Node.js and dependencies.
+  Check if the .env file is configured correctly.
+### Initialize project structure
+  Create basic folder hierarchy (src, assets, config).
+### Implement core logic
+  Write the main entry point and service layer.
 
-# Markdown Rendering (Details)
-## Notes
-- Only `###` headings become tasks.
-- Details lines must be indented.
-- In details, DO NOT use `###` headings (use `####` or deeper).
+---
 
-## Rich Markdown in details
+## Example 2: Grouped Tasks
+## Infrastructure
+### Provision cloud resources
+  Set up EC2 instances and RDS database.
+### Configure security groups
+  Open ports 80, 443, and 22 for allowed IPs.
 
-## Expected (visual)
-- Details panel (Split) and active task body (Inline) should render:
-  - Bulleted + numbered lists with proper indentation
-  - Inline code with a subtle pill background
-  - Fenced code blocks in a dark box with horizontal scroll
-  - Links in accent color, underlined on hover
-  - `####` headings as slightly bolder text
-- Sanitization check:
-  - No alerts/popups should ever run
-  - The `javascript:` link should not be clickable/should have its href removed
-  - The `<script>` tag should not appear as executable content
+## Backend
+### Set up API Gateway
+  Configure routes and lambda integrations.
+### Implement User Auth
+  Set up Cognito and JWT verification logic.
 
-### Render lists + inline code
-  Here is a list:
-  - item one
-  - item two with `inline code`
-  - item three
-  
-  And an ordered list:
-  1. first
-  2. second
+---
 
-### Render code blocks
+## Example 3: Rich Details (Markdown)
+### Build UI Dashboard
+  - [ ] Use Tailwind CSS for styling.
+  - [ ] Support **Dark Mode**.
+  - [ ] Add `Lucide` icons for navigation.
+  - See documentation at [UI Docs](https://example.com).
+
+### Fix Memory Leak in Worker
+  Check the following code block:
   ```js
-  function hello(name) {
-    return `hi ${name}`;
+  while(true) {
+    // Potential issue here
+    processData(); 
   }
   ```
-  
-  Inline: `const x = 1`.
 
-### Render links + emphasis
-  Visit [OpenAI](https://openai.com).
-  
-  **Bold**, *italic*, and ~~strike~~.
+---
 
-### Render headings inside details (use ####)
-  #### Subsection
-  Some text under a subsection.
-  
-  #### Another subsection
-  - bullet under subsection
+## Example 4: Raw Text (For AI Convert Test)
+> Copy this text, paste it into the Editor, and check the "AI Convert" toggle to test the intelligent ingestion.
 
-### Sanitization check (HTML should not execute)
-  This should be removed or neutralized:
-  <script>alert('xss')</script>
-  <img src=x onerror=alert('xss')>
-  <a href="javascript:alert('xss')">bad link</a>
-  
-  This should remain as normal Markdown:
-  - `code`
-  - [safe link](https://example.com)
-
-# Demo
-## Phase A
-### Step A1
-  detail A1
-## Phase B
-### Step B1
-  detail B1
-
-# Doc A
-### Step 1
-  a
-# Doc B
-### Step 2
-  b
+I need to finish the deployment today. First, I have to SSH into the new server and install the basic environment (Nginx/PHP). After that, I'll need to transfer the local build files to the /var/www/html folder. Oh, don't forget to check the database connection strings in the config file, they might be pointing to the wrong IP. Once the site is up, run the smoke tests and if everything looks good, back up the logs and clear the temp folder.

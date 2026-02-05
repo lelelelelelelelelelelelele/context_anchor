@@ -6,6 +6,7 @@ const ASSETS = [
   "./script.js",
   "./marked.min.js",
   "./system_prompt.txt",
+  "./todolist_get.txt",
   "./manifest.webmanifest",
   "./icon-192.png",
   "./icon-512.png",

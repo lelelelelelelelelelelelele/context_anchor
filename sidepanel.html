@@ -13,16 +13,18 @@
       <div id="main-page" class="page">
         <section class="tasks">
           <header class="panel-header">
-            <h1>Rail</h1>
+            <div class="header-top">
+              <h1>Rail</h1>
+              <div class="header-actions">
+                <button id="add-task-toggle" class="icon-button" title="Add or Edit Tasks">
+                  <span class="icon-plus">+</span>
+                </button>
+              </div>
+            </div>
             <p>Context Anchor · Execution GPS</p>
             <p id="task-doc-title" class="doc-title"></p>
           </header>
-          <div class="ingest">
-            <textarea id="task-input" placeholder="Paste Markdown steps (###), e.g.\n### Do thing\n  details..."></textarea>
-            <button id="add-tasks">Add Tasks</button>
-            <button id="overview-tasks" class="clear-tasks" aria-label="Show overview">Overview</button>
-            <button id="clear-tasks" class="clear-tasks" aria-label="Clear tasks">Clear Tasks</button>
-          </div>
+
           <div class="tasks-body">
             <div id="task-list" class="task-list" aria-live="polite"></div>
             <aside id="task-details" class="task-details" aria-label="Active task details">
@@ -31,7 +33,10 @@
               <div class="task-details-body md" id="task-details-body"></div>
             </aside>
           </div>
-          <div id="task-progress" class="task-progress task-status" aria-live="polite"></div>
+          <div class="progress-bar-container">
+            <div id="progress-bar-fill" class="progress-bar-fill"></div>
+            <div id="task-progress" class="task-progress task-status" aria-live="polite"></div>
+          </div>
         </section>
 
         <section class="chat">
@@ -54,6 +59,39 @@
           <div class="chat-input">
             <input id="chat-input" type="text" placeholder="Ask about the active task..." />
             <button id="send-chat">Send</button>
+          </div>
+        </section>
+      </div>
+
+      <div id="editor-page" class="page hidden" aria-label="Task Editor">
+        <header class="settings-header">
+          <button id="editor-back" class="settings-back" aria-label="Back">Back</button>
+          <h2>Task Editor</h2>
+        </header>
+
+        <section class="settings-section">
+          <div class="ingest-standalone">
+            <textarea id="task-input" placeholder="Paste Markdown steps (###), e.g.\n### Do thing\n  details..."></textarea>
+            
+            <div class="editor-actions">
+              <button id="add-tasks" class="primary-button">Update Task List</button>
+              
+              <div class="editor-options">
+                <label class="ingest-toggle-ui" title="Use AI to convert raw text into Rail tasks">
+                  <input id="ai-convert" type="checkbox" />
+                  <span>AI Convert</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="secondary-actions">
+              <button id="overview-tasks" class="text-button">Get Tasks from AI Clipboard</button>
+              <button id="clear-tasks" class="danger-button">Clear All Tasks</button>
+            </div>
+          </div>
+          
+          <div class="editor-help">
+            <p>Format: Markdown headers (<code>###</code>) define steps. Indented text below the header becomes the step details.</p>
           </div>
         </section>
       </div>
