@@ -2,6 +2,10 @@
 
 Minimalist, local-first side panel for task anchoring and execution chat.
 
+## 📱 Demo & Download
+- **Live Demo**: https://context-anchor.vercel.app/ (PWA mode)
+- **Chrome Extension**: [Available on Chrome Web Store](https://chrome.google.com/webstore/detail/rail) (coming soon)
+
 ## Features
 - **Local-first tasks**: Tasks and settings persist in local storage.
 - **AI chat with context**: Injects active task, details, and progress into prompts.
@@ -19,13 +23,25 @@ Minimalist, local-first side panel for task anchoring and execution chat.
 - `styles.css`: VS Code-like dark theme.
 - `script.js`: Task list, settings, and chat logic.
 
-## Quick Test (Browser)
+## Quick Start
+
+### 🌐 Try Online (No Installation)
+1. Visit https://context-anchor.vercel.app/
+2. Paste task list using the format below.
+3. Configure your OpenAI-compatible API and start chatting.
+
+### 📦 Install as Chrome Extension
+1. Open `chrome://extensions/`.
+2. Enable **Developer mode**.
+3. Click **Load unpacked** and select the `github` folder.
+4. Open the side panel from the extension toolbar.
+
+### 🖥️ Run Locally (Browser)
 1. Open `sidepanel.html` directly in a browser.
 2. Paste steps using the Markdown format below and click **Add Tasks**.
 3. Save API settings and send a chat question.
 
 ## Task Format (Markdown)
-Rail ingests tasks from Markdown headings.
 
 - `### Step title` defines a step (becomes a task).
 - Indented continuation lines under a step become step details (stored in `context_payload.details`).
